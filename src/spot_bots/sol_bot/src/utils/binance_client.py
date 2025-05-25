@@ -192,13 +192,16 @@ class BinanceAPI:
                     logger.warning(f"Cantidad insuficiente de {base_asset} para vender")
                     return None
             
-            # Registrar la orden
+            # Registrar la orden con campos compatibles con Binance API
             order = {
                 'symbol': symbol,
                 'side': side,
                 'price': price,
                 'quantity': quantity,
+                'executedQty': quantity,  # Cantidad ejecutada
+                'cummulativeQuoteQty': price * quantity,  # Valor total en USDT
                 'type': order_type,
+                'status': 'FILLED',  # Estado de la orden
                 'time': int(time.time() * 1000)
             }
             self.simulation_orders.append(order)
