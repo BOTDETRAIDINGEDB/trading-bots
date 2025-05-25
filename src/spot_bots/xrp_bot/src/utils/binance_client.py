@@ -60,7 +60,7 @@ class BinanceAPI:
         Obtiene datos históricos de velas (klines) para un símbolo y intervalo específicos.
         
         Args:
-            symbol (str): Par de trading (ej. 'SOLUSDT')
+            symbol (str): Par de trading (ej. 'XRPUSDT')
             interval (str): Intervalo de tiempo (ej. '1h', '4h', '1d')
             start_str (str): Fecha de inicio (ej. '1 day ago', '1 Jan, 2021')
             end_str (str, optional): Fecha de fin. Por defecto es None (hasta ahora).
@@ -106,7 +106,7 @@ class BinanceAPI:
         Coloca una orden en Binance.
         
         Args:
-            symbol (str): Par de trading (ej. 'SOLUSDT')
+            symbol (str): Par de trading (ej. 'XRPUSDT')
             side (str): 'BUY' o 'SELL'
             order_type (str): Tipo de orden (ej. 'MARKET', 'LIMIT')
             quantity (float): Cantidad a comprar/vender
@@ -198,7 +198,7 @@ class BinanceAPI:
         Calcula el ATR (Average True Range) actual para un símbolo.
         
         Args:
-            symbol (str): Par de trading (ej. 'SOLUSDT')
+            symbol (str): Par de trading (ej. 'XRPUSDT')
             period (int): Período para el cálculo del ATR
             interval (str): Intervalo de tiempo para los datos
             

@@ -82,14 +82,11 @@ pip install -r requirements.txt
 ```bash
 # Probar bot de XRP
 python src/spot_bots/xrp_bot/main.py
-
-# Probar bot de SOL
-python src/spot_bots/sol_bot/main.py
 ```
 
 ## Notas Importantes
 - NUNCA uses credenciales reales de producción
-- Usa SOLO la cuenta de Binance Testnet
+- Usa SOLO la cuenta de Binance Testnet para pruebas
 - Todas las operaciones deben ser de prueba
 - Reporta cualquier error o mejora como Issue en GitHub
 

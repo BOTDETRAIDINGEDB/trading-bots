@@ -19,6 +19,5 @@ IS_PRODUCTION = ENV == 'production'
 
 # Trading Pairs
 TRADING_PAIRS = {
-    'XRP': 'XRPUSDT',
-    'SOL': 'SOLUSDT'
+    'XRP': 'XRPUSDT'
 }

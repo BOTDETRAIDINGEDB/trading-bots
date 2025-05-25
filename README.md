@@ -1,12 +1,11 @@
 # Cryptocurrency Trading Bots
 
-Automated trading bots for cryptocurrency spot and futures markets, with support for XRP and SOL trading pairs.
+Automated trading bots for cryptocurrency spot and futures markets, with support for XRP trading pairs.
 
 ## Features
 
 - Spot Trading Bots:
   - XRP Trading Bot
-  - SOL Trading Bot
 - Futures Trading Bots (Coming Soon)
 - Real-time market data analysis
 - Telegram notifications
