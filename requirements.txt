@@ -1,6 +1,7 @@
 # API Clients
 python-binance>=1.0.17
 python-telegram-bot>=20.3
+tenacity>=8.2.0
 
 # Data Analysis
 pandas>=2.0.0

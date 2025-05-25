@@ -1,19 +1,63 @@
 import logging
 import requests
+import time
 from datetime import datetime
-import traceback
+from typing import Dict, Optional, Union, Any
+from requests.exceptions import RequestException
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+# Configuración de logging
+logger = logging.getLogger(__name__)
+
+# Constantes
+MAX_RETRIES = 3
+BASE_WAIT = 2
+MAX_WAIT = 10
+API_TIMEOUT = 10
 
 class TelegramNotifier:
-    def __init__(self, token, chat_id):
+    """Clase para manejar notificaciones de Telegram de manera robusta y profesional.
+    
+    Attributes:
+        token (str): Token del bot de Telegram
+        chat_id (str): ID del chat donde se enviarán los mensajes
+        base_url (str): URL base de la API de Telegram
+        last_buy_price (float): Último precio de compra registrado
+        last_sol_price (float): Último precio de SOL registrado
+    """
+    
+    def __init__(self, token: str, chat_id: str):
+        if not token or not chat_id:
+            raise ValueError("Token y chat_id son requeridos")
+            
         self.token = token
         self.chat_id = chat_id
         self.base_url = f"https://api.telegram.org/bot{token}"
-        self.logger = logging.getLogger(__name__)
-        self.last_buy_price = None
-        self.last_sol_price = None
+        self.last_buy_price: Optional[float] = None
+        self.last_sol_price: Optional[float] = None
         
-    def send_message(self, message):
+        # Verificar conexión al inicializar
+        self._verify_connection()
+        
+    @retry(stop=stop_after_attempt(MAX_RETRIES),
+           wait=wait_exponential(multiplier=BASE_WAIT, max=MAX_WAIT))
+    def send_message(self, message: str) -> bool:
+        """Envía un mensaje a Telegram con reintentos automáticos.
+        
+        Args:
+            message (str): Mensaje a enviar, puede contener formato Markdown
+            
+        Returns:
+            bool: True si el mensaje se envió correctamente
+            
+        Raises:
+            RequestException: Si hay un error de red
+            ValueError: Si el mensaje está vacío
+        """
         """Envía un mensaje a Telegram"""
+        if not message:
+            raise ValueError("El mensaje no puede estar vacío")
+            
         try:
             url = f"{self.base_url}/sendMessage"
             data = {
@@ -21,15 +65,19 @@ class TelegramNotifier:
                 "text": message,
                 "parse_mode": "Markdown"
             }
-            response = requests.post(url, data=data)
-            if response.status_code != 200:
-                self.logger.error(f"Error al enviar mensaje a Telegram: {response.text}")
-                return False
+            
+            response = requests.post(url, data=data, timeout=API_TIMEOUT)
+            response.raise_for_status()
+            
+            logger.debug(f"Mensaje enviado exitosamente: {message[:50]}...")
             return True
+            
+        except RequestException as e:
+            logger.error(f"Error de red al enviar mensaje: {str(e)}")
+            raise
         except Exception as e:
-            self.logger.error(f"Excepción al enviar mensaje a Telegram: {str(e)}")
-            self.logger.error(traceback.format_exc())
-            return False
+            logger.error(f"Error inesperado al enviar mensaje: {str(e)}")
+            raise
     
     def send_trade_notification(self, symbol, side, price, quantity, total_value):
         """Envía una notificación de operación de trading con información enriquecida"""
