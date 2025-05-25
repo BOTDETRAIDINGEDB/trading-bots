@@ -195,10 +195,10 @@ class TelegramMonitor:
             symbol = order.get("symbol", "")
             side = order.get("side", "")
             price = float(order.get("price", 0))
-            quantity = float(order.get("executedQty", 0))
-            total_value = float(order.get("cummulativeQuoteQty", 0))
+            quantity = float(order.get("quantity", order.get("executedQty", 0)))
+            total_value = price * quantity  # Calcular el valor total basado en precio y cantidad
             
-            if price > 0:
+            if price > 0 and quantity > 0:
                 self.telegram.send_trade_notification(
                     symbol, side, price, quantity, total_value
                 )
