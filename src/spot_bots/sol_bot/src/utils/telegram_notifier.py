@@ -1,7 +1,6 @@
 import logging
 import requests
-import time
-from datetime import datetime
+import datetime
 from typing import Dict, Optional, Union, Any
 from requests.exceptions import RequestException
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -39,6 +38,17 @@ class TelegramNotifier:
         # Verificar conexión al inicializar
         self._verify_connection()
         
+    def _verify_connection(self) -> bool:
+        """Verifica la conexión con Telegram."""
+        try:
+            response = requests.get(f"{self.base_url}/getMe")
+            response.raise_for_status()
+            logger.info("Conexión con Telegram verificada exitosamente")
+            return True
+        except Exception as e:
+            logger.error(f"Error al verificar conexión con Telegram: {e}")
+            raise
+            
     @retry(stop=stop_after_attempt(MAX_RETRIES),
            wait=wait_exponential(multiplier=BASE_WAIT, max=MAX_WAIT))
     def send_message(self, message: str) -> bool:
