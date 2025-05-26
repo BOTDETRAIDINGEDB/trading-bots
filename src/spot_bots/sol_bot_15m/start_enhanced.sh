@@ -120,7 +120,7 @@ if [ "$USE_ML" = true ]; then
     MODEL_FILE="${SYMBOL,,}_model.pkl"
     if [ ! -f "$MODEL_FILE" ]; then
         echo -e "${YELLOW}Modelo de ML no encontrado. Entrenando modelo inicial...${NC}"
-        python update_model.py --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK"
+        python3 update_model.py --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK"
     else
         echo -e "${GREEN}Modelo de ML encontrado: $MODEL_FILE${NC}"
     fi
@@ -139,11 +139,11 @@ fi
 
 # Iniciar el gestor de riesgos
 echo -e "${GREEN}Iniciando gestor de riesgos...${NC}"
-python risk_manager.py --state-file "$STATE_FILE" &
+python3 risk_manager.py --state-file "$STATE_FILE" &
 
 # Iniciar el bot en segundo plano
 echo -e "${GREEN}Iniciando bot SOL...${NC}"
-nohup python main.py $BOT_ARGS > "$LOG_FILE" 2>&1 &
+nohup python3 adaptive_main.py $BOT_ARGS > "$LOG_FILE" 2>&1 &
 BOT_PID=$!
 echo -e "${GREEN}Bot iniciado con PID: $BOT_PID${NC}"
 echo $BOT_PID > sol_bot.pid
@@ -171,13 +171,13 @@ else
 fi
 
 # Ejecutar monitor de rendimiento
-python performance_monitor.py --state-file "$STATE_FILE"
+python3 performance_monitor.py --state-file "$STATE_FILE"
 
 # Ejecutar integración con API
-python api_integration.py --state-file "$STATE_FILE"
+python3 api_integration.py --state-file "$STATE_FILE"
 
 # Ejecutar gestor de riesgos
-python risk_manager.py --state-file "$STATE_FILE"
+python3 risk_manager.py --state-file "$STATE_FILE"
 EOF
 
 chmod +x monitor_cron.sh
