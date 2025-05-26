@@ -92,6 +92,33 @@ class BinanceConnector:
             logger.error(f"Error al obtener precio: {e}")
             return None
     
+    def get_historical_klines(self, symbol, interval, start_str, end_str=None, limit=1000):
+        """
+        Obtener datos históricos de velas (klines) para un símbolo
+        
+        Args:
+            symbol (str): Par de trading (ej. 'SOLUSDT')
+            interval (str): Intervalo de tiempo ('1m', '5m', '15m', '1h', etc.)
+            start_str (str): Fecha de inicio en formato 'YYYY-MM-DD'
+            end_str (str): Fecha de fin en formato 'YYYY-MM-DD' (opcional)
+            limit (int): Número máximo de velas a obtener (máx. 1000)
+            
+        Returns:
+            list: Lista de velas en formato de Binance
+        """
+        try:
+            klines = self.client.get_klines(
+                symbol=symbol,
+                interval=interval,
+                startTime=int(datetime.strptime(start_str, "%Y-%m-%d").timestamp() * 1000),
+                endTime=int(datetime.strptime(end_str, "%Y-%m-%d").timestamp() * 1000) if end_str else None,
+                limit=limit
+            )
+            return klines
+        except (BinanceAPIException, BinanceRequestException) as e:
+            logger.error(f"Error al obtener datos históricos: {e}")
+            return []
+    
     def create_order(self, symbol, side, order_type, quantity=None, price=None, test=True):
         """Crear una orden"""
         try:
