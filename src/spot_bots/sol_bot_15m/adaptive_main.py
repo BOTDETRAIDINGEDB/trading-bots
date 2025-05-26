@@ -198,6 +198,9 @@ class AdaptiveBot:
             pd.DataFrame: DataFrame con indicadores calculados, o None si hubo un error.
         """
         try:
+            # Crear una copia para evitar advertencias de SettingWithCopyWarning
+            df = df.copy()
+            
             # Calcular EMA de 8 y 21 períodos
             df['ema8'] = df['close'].ewm(span=8, adjust=False).mean()
             df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
@@ -219,10 +222,16 @@ class AdaptiveBot:
             df['macd_hist'] = df['macd'] - df['macd_signal']
             
             # Calcular Bandas de Bollinger
-            df['middle_band'] = df['close'].rolling(window=20).mean()
+            # Usar nombres consistentes con lo que espera el modelo ML
+            df['bb_middle'] = df['close'].rolling(window=20).mean()
             std = df['close'].rolling(window=20).std()
-            df['upper_band'] = df['middle_band'] + (std * 2)
-            df['lower_band'] = df['middle_band'] - (std * 2)
+            df['bb_upper'] = df['bb_middle'] + (std * 2)
+            df['bb_lower'] = df['bb_middle'] - (std * 2)
+            
+            # Para mantener compatibilidad con el código existente
+            df['middle_band'] = df['bb_middle']
+            df['upper_band'] = df['bb_upper']
+            df['lower_band'] = df['bb_lower']
             
             # Calcular ATR
             high_low = df['high'] - df['low']
@@ -231,8 +240,25 @@ class AdaptiveBot:
             ranges = pd.concat([high_low, high_close, low_close], axis=1)
             true_range = ranges.max(axis=1)
             df['atr'] = true_range.rolling(window=14).mean()
+            df['atr_14'] = df['atr']  # Para compatibilidad con el modelo ML
             
-            logger.info("Indicadores técnicos calculados")
+            # Calcular SMA para el modelo ML
+            df['sma_20'] = df['close'].rolling(window=20).mean()
+            df['sma_50'] = df['close'].rolling(window=50).mean()
+            df['sma_200'] = df['close'].rolling(window=200).mean()
+            
+            # Calcular indicadores adicionales para el modelo ML
+            df['rsi_14'] = df['rsi']
+            df['relative_volume'] = df['volume'] / df['volume'].rolling(window=20).mean()
+            df['pct_change'] = df['close'].pct_change()
+            
+            # Verificar que todos los indicadores se calcularon correctamente
+            required_columns = ['bb_middle', 'bb_upper', 'bb_lower', 'atr_14', 'sma_20', 'sma_50', 'sma_200', 'rsi_14']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.warning(f"Columnas faltantes: {missing_columns}")
+            
+            logger.info("Indicadores técnicos calculados correctamente")
             return df
         except Exception as e:
             logger.error(f"Error al calcular indicadores: {str(e)}")
@@ -308,50 +334,32 @@ class AdaptiveBot:
             if len(df) < 200:  # Necesitamos al menos 200 filas para SMA200
                 logger.warning("Datos insuficientes para predicción ML")
                 return None
-                
-            # Imprimir las columnas disponibles para depuración
-            logger.info(f"Columnas disponibles: {df.columns.tolist()}")
             
-            # Crear un nuevo DataFrame con las columnas que espera el modelo
-            model_df = pd.DataFrame()
+            # Verificar que todas las columnas necesarias estén presentes
+            required_columns = [
+                'sma_20', 'sma_50', 'sma_200', 'rsi_14', 'macd', 'macd_signal', 'macd_hist',
+                'bb_upper', 'bb_middle', 'bb_lower', 'atr_14', 'relative_volume', 'pct_change'
+            ]
             
-            # Calcular medias móviles simples
-            model_df['sma_20'] = df['close'].rolling(window=20).mean().iloc[-1]
-            model_df['sma_50'] = df['close'].rolling(window=50).mean().iloc[-1]
-            model_df['sma_200'] = df['close'].rolling(window=200).mean().iloc[-1]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.warning(f"Columnas faltantes para predicción ML: {missing_columns}")
+                return None
             
-            # Usar RSI y MACD ya calculados
-            model_df['rsi_14'] = df['rsi'].iloc[-1]
-            model_df['macd'] = df['macd'].iloc[-1]
-            model_df['macd_signal'] = df['macd_signal'].iloc[-1]
-            model_df['macd_histogram'] = df['macd_hist'].iloc[-1]
+            # Obtener la última fila con todos los indicadores
+            last_row = df.iloc[-1:]
             
-            # Bandas de Bollinger
-            # Usar middle_band si está disponible, de lo contrario calcularla
-            if 'middle_band' in df.columns:
-                model_df['bb_middle'] = df['middle_band'].iloc[-1]
-            else:
-                model_df['bb_middle'] = df['close'].rolling(window=20).mean().iloc[-1]
-                
-            model_df['bb_upper'] = df['upper_band'].iloc[-1]
-            model_df['bb_lower'] = df['lower_band'].iloc[-1]
+            # Crear un nuevo DataFrame con las columnas requeridas
+            features = last_row[required_columns].copy()
             
-            # ATR y otros indicadores
-            model_df['atr_14'] = df['atr'].iloc[-1]
-            model_df['relative_volume'] = df['volume'].iloc[-1] / df['volume'].rolling(window=20).mean().iloc[-1]
-            model_df['pct_change'] = df['close'].pct_change().iloc[-1]
-            
-            # Calcular ratios adicionales
-            model_df['sma_20_50_ratio'] = model_df['sma_20'] / model_df['sma_50']
-            model_df['sma_20_200_ratio'] = model_df['sma_20'] / model_df['sma_200']
-            model_df['price_to_bb_upper'] = df['close'].iloc[-1] / model_df['bb_upper']
-            model_df['price_to_bb_lower'] = df['close'].iloc[-1] / model_df['bb_lower']
-            
-            # Convertir a DataFrame
-            model_df = pd.DataFrame([model_df.values[0]], columns=model_df.columns)
+            # Añadir ratios adicionales
+            features['sma_20_50_ratio'] = features['sma_20'] / features['sma_50']
+            features['sma_20_200_ratio'] = features['sma_20'] / features['sma_200']
+            features['price_to_bb_upper'] = df['close'].iloc[-1] / features['bb_upper']
+            features['price_to_bb_lower'] = df['close'].iloc[-1] / features['bb_lower']
             
             # Obtener predicción usando el modelo
-            prediction = self.strategy.ml_model.predict(model_df)
+            prediction = self.strategy.ml_model.predict(features)
             
             # Convertir a entero si es un array
             if hasattr(prediction, 'item'):
@@ -363,6 +371,9 @@ class AdaptiveBot:
             return int(prediction) if prediction is not None else None
         except Exception as e:
             logger.error(f"Error al obtener predicción del modelo ML: {str(e)}")
+            # Imprimir el traceback completo para mejor diagnóstico
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return None
     
     def check_retrain_model(self):
