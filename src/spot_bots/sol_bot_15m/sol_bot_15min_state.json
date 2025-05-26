@@ -1,23 +1,35 @@
 {
   "bot_status": "running",
-  "last_update": "2025-05-26T18:23:00Z",
+  "last_update": "2025-05-26T18:29:00Z",
   "symbol": "SOLUSDT",
   "interval": "15m",
-  "balance": 1000.0,
+  "balance": 979.20174,
   "initial_balance": 1000.0,
   "current_position": null,
-  "trades": [],
+  "trades": [
+    {
+      "id": 1,
+      "type": "long",
+      "entry_price": 178.38,
+      "entry_time": "2025-05-26T17:40:00Z",
+      "exit_price": 176.5,
+      "exit_time": "2025-05-26T18:10:00Z",
+      "profit_loss": -20.79826,
+      "profit_loss_percent": -2.08,
+      "reason": "stop_loss"
+    }
+  ],
   "performance": {
-    "total_trades": 0,
+    "total_trades": 1,
     "winning_trades": 0,
-    "losing_trades": 0,
+    "losing_trades": 1,
     "win_rate": 0.0,
     "profit_factor": 0.0,
-    "total_profit": 0.0,
-    "max_drawdown": 0.0
+    "total_profit": -20.79826,
+    "max_drawdown": 20.79826
   },
   "risk_level": "medium",
   "simulation_mode": true,
   "use_ml": true,
-  "saved_at": "2025-05-26T18:23:00Z"
+  "saved_at": "2025-05-26T18:29:00Z"
 }
