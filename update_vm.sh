@@ -119,12 +119,13 @@ BOT_DIR="/home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_20m
 # Crear directorio de logs si no existe
 mkdir -p "$BOT_DIR/logs"
 
-# Iniciar el bot en una sesión de screen
+# Iniciar el bot en una sesión de screen con redirección de errores
 cd "$BOT_DIR"
-screen -dmS sol_bot_20m python3 main.py --use-ml --retrain-interval 20 --interval 20m --symbol SOLUSDT
+screen -dmS sol_bot_20m bash -c "python3 main.py --use-ml --retrain-interval 20 --interval 20m --symbol SOLUSDT 2> logs/error.log"
 
 echo "Bot SOL iniciado en sesión screen 'sol_bot_20m'"
 echo "Para ver los logs: screen -r sol_bot_20m"
+echo "Para ver errores: cat $BOT_DIR/logs/error.log"
 EOF
 
 chmod +x "$START_SCRIPT"
