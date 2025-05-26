@@ -676,8 +676,9 @@ def parse_arguments():
 
 def main():
     """Función principal."""
-    # Cargar variables de entorno
-    load_dotenv()
+    # Cargar credenciales desde credentials.json
+    from utils.credentials_loader import load_credentials
+    load_credentials()
     
     # Parsear argumentos
     args = parse_arguments()
