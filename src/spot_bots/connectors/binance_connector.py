@@ -83,6 +83,10 @@ class BinanceConnector:
             logger.error(f"Error al obtener balance: {e}")
             return 0.0
     
+    def get_balance(self, asset='USDT'):
+        """Alias para get_account_balance para mantener compatibilidad"""
+        return self.get_account_balance(asset)
+    
     def get_symbol_price(self, symbol):
         """Obtener precio actual de un símbolo"""
         try:

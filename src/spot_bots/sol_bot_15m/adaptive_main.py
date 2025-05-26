@@ -301,15 +301,36 @@ class AdaptiveBot:
             return None
         
         try:
+            # Verificar que todas las columnas necesarias estén presentes
+            required_columns = ['ema8', 'ema21', 'rsi', 'macd', 'macd_signal', 'atr']
+            for col in required_columns:
+                if col not in df.columns:
+                    logger.error(f"Columna {col} no encontrada en el DataFrame")
+                    return None
+            
+            # Verificar que el DataFrame tenga al menos una fila
+            if len(df) == 0:
+                logger.error("DataFrame vacío, no se puede hacer predicción")
+                return None
+            
             # Preparar datos para el modelo
-            # (Asumimos que el modelo espera los mismos indicadores que calculamos)
-            features = df.iloc[-1][['ema8', 'ema21', 'rsi', 'macd', 'macd_signal', 'atr']].values.reshape(1, -1)
+            # Usar .iloc[-1:] para obtener el último registro como un DataFrame
+            last_row = df.iloc[-1:]
+            
+            # Seleccionar solo las columnas necesarias
+            features = last_row[required_columns].values
             
             # Obtener predicción
             prediction = self.strategy.ml_model.predict(features)
             
+            # Convertir a entero si es un array
+            if hasattr(prediction, 'item'):
+                prediction = prediction.item()
+            elif isinstance(prediction, (list, np.ndarray)) and len(prediction) > 0:
+                prediction = prediction[0]
+            
             logger.info(f"Predicción del modelo ML: {prediction}")
-            return prediction
+            return int(prediction) if prediction is not None else None
         except Exception as e:
             logger.error(f"Error al obtener predicción del modelo ML: {str(e)}")
             return None
