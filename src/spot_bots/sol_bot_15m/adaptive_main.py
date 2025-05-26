@@ -78,7 +78,7 @@ class AdaptiveBot:
         self.telegram = EnhancedTelegramNotifier()
         
         # Inicializar conector de Binance
-        self.binance = BinanceConnector(simulation=simulation)
+        self.binance = BinanceConnector(testnet=simulation)
         
         # Inicializar analizador de mercado
         self.market_analyzer = MarketAnalyzer(symbol=symbol)
