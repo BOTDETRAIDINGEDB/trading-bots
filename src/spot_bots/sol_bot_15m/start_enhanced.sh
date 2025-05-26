@@ -134,7 +134,9 @@ if [ "$SIMULATION" = true ]; then
 fi
 
 if [ "$USE_ML" = true ]; then
-    BOT_ARGS="$BOT_ARGS --use-ml --retrain-interval $RETRAIN_INTERVAL"
+    BOT_ARGS="$BOT_ARGS --retrain-interval $RETRAIN_INTERVAL"
+else
+    BOT_ARGS="$BOT_ARGS --no-ml"
 fi
 
 # Iniciar el gestor de riesgos
@@ -163,11 +165,11 @@ if [ -f sol_bot.pid ]; then
         echo "Bot en ejecución (PID: \$PID)"
     else
         echo "Bot no está en ejecución. Reiniciando..."
-        ./start_enhanced.sh --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK" --balance "$BALANCE" --risk "$RISK" $([ "$SIMULATION" = true ] && echo "--simulation") $([ "$USE_ML" = true ] && echo "--use-ml --retrain-interval $RETRAIN_INTERVAL")
+        ./start_enhanced.sh --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK" --balance "$BALANCE" --risk "$RISK" $([ "$SIMULATION" = true ] && echo "--simulation") $([ "$USE_ML" = true ] && echo "--retrain-interval $RETRAIN_INTERVAL") $([ "$USE_ML" != true ] && echo "--no-ml")
     fi
 else
     echo "Archivo PID no encontrado. Reiniciando bot..."
-    ./start_enhanced.sh --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK" --balance "$BALANCE" --risk "$RISK" $([ "$SIMULATION" = true ] && echo "--simulation") $([ "$USE_ML" = true ] && echo "--use-ml --retrain-interval $RETRAIN_INTERVAL")
+    ./start_enhanced.sh --symbol "$SYMBOL" --interval "$INTERVAL" --lookback "$LOOKBACK" --balance "$BALANCE" --risk "$RISK" $([ "$SIMULATION" = true ] && echo "--simulation") $([ "$USE_ML" = true ] && echo "--retrain-interval $RETRAIN_INTERVAL") $([ "$USE_ML" != true ] && echo "--no-ml")
 fi
 
 # Ejecutar monitor de rendimiento
