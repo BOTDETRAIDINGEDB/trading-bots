@@ -45,13 +45,15 @@ class MLModel:
         
         # Si no existe o hay error, crear un nuevo modelo optimizado
         self.model = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
+            n_estimators=200,  # Aumentado para mejor precisión
+            max_depth=15,      # Aumentado para capturar patrones más complejos
+            min_samples_split=5,  # Evita overfitting
+            min_samples_leaf=4,   # Evita overfitting
+            bootstrap=True,       # Mejora la robustez
+            class_weight='balanced',  # Maneja desbalances en las clases
             random_state=42,
             n_jobs=-1,  # Usar todos los núcleos disponibles para paralelización
-            class_weight='balanced',  # Manejar desbalance de clases
             verbose=0,  # Silenciar mensajes durante el entrenamiento
-            bootstrap=True,  # Usar bootstrap para mejorar la robustez
             criterion='gini'  # Criterio para medir la calidad de la división
         )
         logger.info("Nuevo modelo creado (no se encontró modelo guardado).")

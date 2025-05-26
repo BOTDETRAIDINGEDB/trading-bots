@@ -45,6 +45,10 @@ class TechnicalStrategy:
         self.position_size = 0.0
         self.stop_loss = 0.0
         self.take_profit = 0.0
+        self.trailing_stop = 0.0
+        self.trailing_active = False
+        self.trailing_percent = 0.015  # 1.5% de trailing stop
+        self.highest_price = 0.0  # Para tracking del trailing stop
         self.trades = []
         self.current_balance = 0.0
         self.initial_balance = 0.0
@@ -169,22 +173,32 @@ class TechnicalStrategy:
     
     def enter_trade(self, price, timestamp):
         """
-        Entra en una operación de compra.
+        Entra en una operación.
         
         Args:
             price (float): Precio de entrada.
             timestamp (datetime): Timestamp de la entrada.
             
         Returns:
-            dict: Detalles de la operación.
+            dict: Información de la operación.
         """
-        self.position = 1  # Posición larga
-        self.entry_price = price
+        # Calcular tamaño de la posición
         self.position_size = self.calculate_position_size(price)
+        
+        # Establecer precio de entrada
+        self.entry_price = price
         
         # Calcular stop loss y take profit
         self.stop_loss = price * (1 - self.stop_loss_pct)
         self.take_profit = price * (1 + self.take_profit_pct)
+        
+        # Resetear variables de trailing stop
+        self.trailing_stop = 0.0
+        self.trailing_active = False
+        self.highest_price = price
+        
+        # Actualizar posición
+        self.position = 1  # Long
         
         # Registrar la operación
         trade = {
@@ -222,7 +236,31 @@ class TechnicalStrategy:
         if self.position == 0:
             return False
         
-        # Verificar stop loss
+        # Actualizar el precio más alto alcanzado para el trailing stop
+        if price > self.highest_price and self.position == 1:
+            self.highest_price = price
+            
+            # Activar trailing stop cuando el precio supere el 50% del camino hacia el take profit
+            halfway_to_tp = self.entry_price + ((self.take_profit - self.entry_price) * 0.5)
+            
+            if not self.trailing_active and price >= halfway_to_tp:
+                self.trailing_active = True
+                self.trailing_stop = price * (1 - self.trailing_percent)
+                logger.info(f"Trailing stop activado a {self.trailing_stop} (precio actual: {price})")
+            
+            # Actualizar el trailing stop si ya está activo
+            elif self.trailing_active:
+                new_trailing_stop = price * (1 - self.trailing_percent)
+                if new_trailing_stop > self.trailing_stop:
+                    self.trailing_stop = new_trailing_stop
+                    logger.info(f"Trailing stop actualizado a {self.trailing_stop} (precio actual: {price})")
+        
+        # Verificar trailing stop si está activo
+        if self.trailing_active and price <= self.trailing_stop:
+            logger.info(f"Trailing Stop alcanzado a precio {price} (TS: {self.trailing_stop})")
+            return True
+        
+        # Verificar stop loss tradicional
         if price <= self.stop_loss:
             logger.info(f"Stop Loss alcanzado a precio {price} (SL: {self.stop_loss})")
             return True
