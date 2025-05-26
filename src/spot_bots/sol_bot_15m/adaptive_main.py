@@ -26,7 +26,7 @@ from strategies.adaptive_strategy import AdaptiveStrategy
 from utils.market_analyzer import MarketAnalyzer
 from utils.capital_manager import CapitalManager
 from utils.enhanced_telegram_notifier import EnhancedTelegramNotifier
-from connectors.binance_connector import BinanceConnector
+from src.connectors.binance_connector import BinanceConnector
 
 # Configurar logging
 logging.basicConfig(
