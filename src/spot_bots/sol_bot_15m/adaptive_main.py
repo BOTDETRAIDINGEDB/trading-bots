@@ -360,17 +360,49 @@ class AdaptiveBot:
             features['price_to_bb_upper'] = features['close'] / features['bb_upper']
             features['price_to_bb_lower'] = features['close'] / features['bb_lower']
             
-            # Obtener predicción usando el modelo
-            prediction = self.strategy.ml_model.predict(features)
-            
-            # Convertir a entero si es un array
-            if hasattr(prediction, 'item'):
-                prediction = prediction.item()
-            elif isinstance(prediction, (list, np.ndarray)) and len(prediction) > 0:
-                prediction = prediction[0]
-            
-            logger.info(f"Predicción del modelo ML: {prediction}")
-            return int(prediction) if prediction is not None else None
+            try:
+                # Obtener predicción usando el modelo
+                prediction = self.strategy.ml_model.predict(features)
+                
+                # Convertir a entero si es un array
+                if hasattr(prediction, 'item'):
+                    prediction = prediction.item()
+                elif isinstance(prediction, (list, np.ndarray)) and len(prediction) > 0:
+                    prediction = prediction[0]
+                
+                logger.info(f"Predicción del modelo ML: {prediction}")
+                return int(prediction) if prediction is not None else None
+            except Exception as e:
+                if "not fitted yet" in str(e):
+                    logger.warning("El modelo no está entrenado. Intentando entrenar...")
+                    # Crear datos de entrenamiento simples
+                    train_df = df.copy()
+                    
+                    # Generar etiquetas simples basadas en el precio
+                    train_df['signal'] = 0  # Neutral por defecto
+                    # Si el precio sube en la siguiente vela, señal de compra
+                    train_df.loc[train_df['close'].shift(-1) > train_df['close'], 'signal'] = 1
+                    # Si el precio baja en la siguiente vela, señal de venta
+                    train_df.loc[train_df['close'].shift(-1) < train_df['close'], 'signal'] = -1
+                    
+                    # Entrenar el modelo
+                    self.strategy.ml_model.train(train_df)
+                    
+                    # Intentar predecir nuevamente
+                    try:
+                        prediction = self.strategy.ml_model.predict(features)
+                        if hasattr(prediction, 'item'):
+                            prediction = prediction.item()
+                        elif isinstance(prediction, (list, np.ndarray)) and len(prediction) > 0:
+                            prediction = prediction[0]
+                        logger.info(f"Predicción del modelo ML después de entrenar: {prediction}")
+                        return int(prediction) if prediction is not None else None
+                    except Exception as e2:
+                        logger.error(f"Error al predecir después de entrenar: {str(e2)}")
+                        return None
+                else:
+                    # Otro tipo de error
+                    raise
         except Exception as e:
             logger.error(f"Error al obtener predicción del modelo ML: {str(e)}")
             # Imprimir el traceback completo para mejor diagnóstico
