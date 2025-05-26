@@ -43,11 +43,16 @@ class MLModel:
             except Exception as e:
                 logger.error(f"Error al cargar el modelo: {str(e)}")
         
-        # Si no existe o hay error, crear un nuevo modelo
+        # Si no existe o hay error, crear un nuevo modelo optimizado
         self.model = RandomForestClassifier(
             n_estimators=100,
             max_depth=10,
-            random_state=42
+            random_state=42,
+            n_jobs=-1,  # Usar todos los núcleos disponibles para paralelización
+            class_weight='balanced',  # Manejar desbalance de clases
+            verbose=0,  # Silenciar mensajes durante el entrenamiento
+            bootstrap=True,  # Usar bootstrap para mejorar la robustez
+            criterion='gini'  # Criterio para medir la calidad de la división
         )
         logger.info("Nuevo modelo creado (no se encontró modelo guardado).")
         return False

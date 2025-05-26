@@ -180,7 +180,16 @@ class DataProcessor:
         df.loc[sell_condition, 'signal'] = -1
         
         # Eliminar señales en los primeros 200 períodos (insuficientes datos para indicadores)
-        df.iloc[:200, df.columns.get_loc('signal')] = 0
+        try:
+            signal_col = df.columns.get_loc('signal')
+            df.iloc[:200, signal_col] = 0
+            logger.debug(f"Señales en los primeros 200 períodos establecidas a 0")
+        except (KeyError, IndexError) as e:
+            logger.error(f"Error al establecer señales iniciales a 0: {str(e)}")
+            # Manejo de recuperación: si no existe la columna 'signal', la creamos
+            if 'signal' not in df.columns:
+                logger.warning("Columna 'signal' no encontrada. Creándola...")
+                df['signal'] = 0
         
         # Contar señales generadas
         buy_signals = (df['signal'] == 1).sum()
