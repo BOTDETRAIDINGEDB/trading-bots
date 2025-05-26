@@ -499,9 +499,9 @@ class AdaptiveBot:
             # Actualizar balance en la estrategia
             self.strategy.set_balance(current_balance)
             
-            # Notificar actualización de mercado cada 4 horas (16 velas de 15 min)
+            # Notificar actualización de mercado cada 15 minutos (1 vela de 15 min)
             current_time = datetime.now()
-            if not hasattr(self, 'last_market_update') or (current_time - self.last_market_update).total_seconds() >= 14400:  # 4 horas
+            if not hasattr(self, 'last_market_update') or (current_time - self.last_market_update).total_seconds() >= 900:  # 15 minutos
                 self.telegram.notify_market_update(self.strategy.market_conditions, current_price)
                 self.last_market_update = current_time
             
