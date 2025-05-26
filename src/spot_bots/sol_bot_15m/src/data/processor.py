@@ -180,7 +180,7 @@ class DataProcessor:
         df.loc[sell_condition, 'signal'] = -1
         
         # Eliminar señales en los primeros 200 períodos (insuficientes datos para indicadores)
-        df.loc[:200, 'signal'] = 0
+        df.iloc[:200, df.columns.get_loc('signal')] = 0
         
         # Contar señales generadas
         buy_signals = (df['signal'] == 1).sum()

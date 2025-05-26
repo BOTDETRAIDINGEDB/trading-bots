@@ -11,7 +11,7 @@ echo -e "${YELLOW}=== Depurando el bot SOL ===${NC}"
 
 # Directorio base
 BASE_DIR="/home/edisonbautistaruiz2025"
-BOT_DIR="${BASE_DIR}/new-trading-bots/src/spot_bots/sol_bot_20m"
+BOT_DIR="${BASE_DIR}/new-trading-bots/src/spot_bots/sol_bot_15m"
 LOG_DIR="${BOT_DIR}/logs"
 DEBUG_LOG="${LOG_DIR}/debug.log"
 

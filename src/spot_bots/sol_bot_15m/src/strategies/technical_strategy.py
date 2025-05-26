@@ -395,7 +395,7 @@ class TechnicalStrategy:
             logger.error(f"Error al procesar datos con ML: {str(e)}")
             return None, None
     
-    def save_state(self, file_path='sol_bot_20m_state.json'):
+    def save_state(self, file_path='sol_bot_15m_state.json'):
         """
         Guarda el estado actual de la estrategia en un archivo JSON.
         
@@ -431,7 +431,7 @@ class TechnicalStrategy:
             logger.error(f"Error al guardar estado: {str(e)}")
             return False
     
-    def load_state(self, file_path='sol_bot_20m_state.json'):
+    def load_state(self, file_path='sol_bot_15m_state.json'):
         """
         Carga el estado de la estrategia desde un archivo JSON.
         

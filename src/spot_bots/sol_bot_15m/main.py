@@ -26,7 +26,7 @@ from strategies.technical_strategy import TechnicalStrategy
 load_dotenv()
 
 # Configurar logging
-def setup_logging(log_file='sol_bot_20m.log'):
+def setup_logging(log_file='sol_bot_15m.log'):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
@@ -54,8 +54,8 @@ def setup_logging(log_file='sol_bot_20m.log'):
     return logger
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Bot de trading para SOL con intervalo de 20 minutos')
-    parser.add_argument('--interval', type=str, default='20m', help='Intervalo de tiempo para las velas (ej. 20m, 1h, 4h)')
+    parser = argparse.ArgumentParser(description='Bot de trading para SOL con intervalo de 15 minutos')
+    parser.add_argument('--interval', type=str, default='15m', help='Intervalo de tiempo para las velas (ej. 15m, 1h, 4h)')
     parser.add_argument('--symbol', type=str, default='SOLUSDT', help='Par de trading')
     parser.add_argument('--simulation', action='store_true', help='Ejecutar en modo simulación')
     parser.add_argument('--balance', type=float, default=1000.0, help='Balance inicial para simulación')

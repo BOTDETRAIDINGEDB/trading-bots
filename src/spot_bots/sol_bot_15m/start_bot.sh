@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script para iniciar el bot SOL de 20 minutos
+# Script para iniciar el bot SOL de 15 minutos
 # Creado: 25 de mayo de 2025
 
 # Cambiar al directorio del proyecto
@@ -20,7 +20,7 @@ fi
 export PYTHONPATH=$PYTHONPATH:$PROJECT_DIR
 
 # Parámetros por defecto
-INTERVAL="20m"
+INTERVAL="15m"
 SYMBOL="SOLUSDT"
 SIMULATION=true
 BALANCE=1000
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Construir el comando
-CMD="python src/spot_bots/sol_bot_20m/main.py --interval $INTERVAL --symbol $SYMBOL"
+CMD="python src/spot_bots/sol_bot_15m/main.py --interval $INTERVAL --symbol $SYMBOL"
 
 if $SIMULATION; then
     CMD="$CMD --simulation --balance $BALANCE"

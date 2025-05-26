@@ -219,7 +219,7 @@ class MLModel:
             # Calcular tiempo transcurrido desde el último entrenamiento en minutos
             elapsed_minutes = (datetime.now() - self.last_trained).total_seconds() / 60
             
-            # Reentrenar cada 20 minutos
+            # Reentrenar cada 15 minutos
             if elapsed_minutes >= 20:
                 logger.info(f"Han pasado {elapsed_minutes:.1f} minutos desde el último entrenamiento. Reentrenando...")
                 return True

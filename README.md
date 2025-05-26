@@ -1,45 +1,43 @@
-# Cryptocurrency Trading Bots
+# Trading Bots
 
-Automated trading bots for cryptocurrency spot and futures markets, with support for XRP trading pairs.
+Este repositorio contiene bots de trading para diferentes criptomonedas, incluyendo:
 
-## Features
+- Bot SOL con intervalo de 15 minutos y reentrenamiento de modelo ML
+- Bot XRP con intervalo de 30 minutos
 
-- Spot Trading Bots:
-  - XRP Trading Bot
-- Futures Trading Bots (Coming Soon)
-- Real-time market data analysis
-- Telegram notifications
-- Secure credential management
+## Estructura del Proyecto
 
-## Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Copy `.env.example` to `.env` and fill in your credentials
-
-## Usage
-
-Each bot can be run independently:
-
-```bash
-python src/spot_bots/xrp_bot/main.py
-python src/spot_bots/sol_bot/main.py
+```
+trading-bots/
+├── src/
+│   ├── spot_bots/
+│   │   ├── sol_bot_15m/
+│   │   │   ├── main.py
+│   │   │   ├── src/
+│   │   │   │   ├── data/
+│   │   │   │   ├── models/
+│   │   │   │   ├── strategies/
+│   │   │   │   └── utils/
+│   │   ├── xrp_bot/
+│   │   │   ├── ...
+├── scripts/
+│   ├── update_vm.sh
+│   ├── debug_bot.sh
+│   ├── convert_to_15m.sh
+│   └── fix_all_references.py
 ```
 
-## Security
+## Configuración
 
-- Never commit sensitive data to this repository
-- Store all API keys and credentials in `.env` file
-- Keep backup of credentials in secure storage
+1. Crea un archivo `.env` en el directorio del bot basado en `.env.example`
+2. Ejecuta el bot con:
+   ```
+   python main.py --use-ml --retrain-interval 15 --interval 15m --symbol SOLUSDT
+   ```
 
-## Contributing
+## Scripts de Utilidad
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-Bots comerciales automatizados para mercados al contado y de futuros de criptomonedas
+- `update_vm.sh`: Actualiza el bot en la máquina virtual
+- `debug_bot.sh`: Verifica la configuración del bot y diagnostica problemas
+- `convert_to_15m.sh`: Convierte el bot de 20m a 15m
+- `fix_all_references.py`: Corrige todas las referencias de 20m a 15m
