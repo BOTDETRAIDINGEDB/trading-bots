@@ -1,5 +1,14 @@
 # Guía de Configuración para Jules
 
+## Estructura del Proyecto
+
+El sistema completo consta de dos repositorios separados:
+
+1. **trading-bots**: Contiene los bots de trading (XRP bot)
+2. **trading-bots-api**: Proporciona una interfaz API para interactuar con los bots
+
+Ambos repositorios deben configurarse correctamente para que el sistema funcione adecuadamente.
+
 ## Mejores Prácticas Profesionales
 
 ### 1. Seguridad y Credenciales
@@ -84,6 +93,68 @@ pip install -r requirements.txt
 python src/spot_bots/xrp_bot/main.py
 ```
 
+## Configuración de la API (trading-bots-api)
+
+Además del repositorio principal de bots, es necesario configurar la API que permite interactuar con ellos:
+
+### 1. Clonar el Repositorio de la API
+```bash
+git clone https://github.com/BOTDETRAIDINGEDB/trading-bots-api.git
+cd trading-bots-api
+```
+
+### 2. Configurar Variables de Entorno para la API
+1. Copiar el archivo `.env.example` a `.env`
+```bash
+cp .env.example .env
+```
+
+2. Editar el archivo `.env` con las rutas correctas para tu sistema:
+
+#### Para Windows:
+```
+# Bot Paths
+XRP_BOT_PATH=C:\Users\JULES\Documents\GitHub\trading-bots
+XRP_BOT_LOG=C:\Users\JULES\Documents\GitHub\trading-bots\monitor.log
+XRP_BOT_STATE=C:\Users\JULES\Documents\GitHub\trading-bots\src\spot_bots\xrp_bot\bot_state.json
+XRP_BOT_SIMULATION=C:\Users\JULES\Documents\GitHub\trading-bots\src\spot_bots\xrp_bot\simulation_state.json
+```
+
+#### Para Linux/Mac:
+```
+# Bot Paths
+XRP_BOT_PATH=/home/jules/trading-bots/src/spot_bots/xrp_bot
+XRP_BOT_LOG=/home/jules/trading-bots/monitor.log
+XRP_BOT_STATE=/home/jules/trading-bots/src/spot_bots/xrp_bot/bot_state_xrp_30m.json
+XRP_BOT_SIMULATION=/home/jules/trading-bots/src/spot_bots/xrp_bot/simulation_state_xrp_30m.json
+```
+
+3. Configurar las credenciales de seguridad y API:
+```
+# Security
+API_KEY=tu_api_key_aqui
+JWT_SECRET=tu_jwt_secret_aqui
+
+# Binance API Keys
+BINANCE_API_KEY=tu_binance_api_key_aqui
+BINANCE_API_SECRET=tu_binance_api_secret_aqui
+```
+
+### 3. Instalar Dependencias de la API
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Iniciar la API
+```bash
+python api/app.py
+```
+
+### 5. Acceder a la API
+Una vez iniciada, puedes acceder a la API a través de:
+- http://localhost:5000/api/bots (lista todos los bots)
+- http://localhost:5000/api/bots/xrp/status (estado del bot XRP)
+
 ## Notas Importantes
 - NUNCA uses credenciales reales de producción
 - Usa SOLO la cuenta de Binance Testnet para pruebas
@@ -135,6 +206,33 @@ trading-bots/
 - Preparar endpoints para comunicación con n8n
 - Documentar flujos de datos
 - Mantener separación entre pruebas y producción
+
+## Relación entre Bots y API
+
+Es importante entender cómo se relacionan los dos componentes del sistema:
+
+1. **Bots (trading-bots)**:
+   - Ejecutan la lógica de trading
+   - Analizan el mercado y generan señales
+   - Realizan operaciones de compra/venta
+   - Guardan su estado en archivos JSON
+   - Generan logs de actividad
+
+2. **API (trading-bots-api)**:
+   - Proporciona una interfaz para interactuar con los bots
+   - Lee los archivos de estado y logs de los bots
+   - Presenta la información en un formato estructurado
+   - Permite monitorear el rendimiento de los bots
+   - Facilita el control remoto de los bots
+
+La API necesita saber dónde encontrar los archivos del bot, por eso es crucial configurar correctamente las rutas en el archivo `.env` de la API.
+
+## Flujo de Trabajo Recomendado
+
+1. Desarrollar y probar los bots en el entorno local
+2. Subir los cambios a GitHub
+3. Configurar la API para que apunte a los archivos correctos
+4. Usar la API para monitorear y controlar los bots
 
 ## Contacto
 Para cualquier duda o problema, crear un Issue en GitHub o contactar al administrador del proyecto.
