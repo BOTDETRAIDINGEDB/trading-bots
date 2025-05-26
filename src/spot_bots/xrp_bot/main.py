@@ -8,11 +8,20 @@ import logging
 import logging.handlers
 import json
 import argparse
-from src.utils.binance_client import BinanceAPI
-from src.data.processor import DataProcessor
-from src.models.ml_model import TradingModel
-from src.strategies.ml_strategy import MLTradingStrategy
-from src.data.multi_timeframe_processor import MultiTimeframeProcessor
+import sys
+
+# Ajustar el PYTHONPATH para encontrar los módulos correctamente
+bot_dir = os.path.dirname(os.path.abspath(__file__))
+src_dir = os.path.join(bot_dir, 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+# Ahora importar desde la ubicación correcta
+from utils.binance_client import BinanceAPI
+from data.processor import DataProcessor
+from models.ml_model import TradingModel
+from strategies.ml_strategy import MLTradingStrategy
+from data.multi_timeframe_processor import MultiTimeframeProcessor
 
 # Configurar logging
 logger = logging.getLogger(__name__)
