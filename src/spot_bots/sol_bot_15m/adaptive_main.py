@@ -202,32 +202,35 @@ class AdaptiveBot:
             df['ema8'] = df['close'].ewm(span=8, adjust=False).mean()
             df['ema21'] = df['close'].ewm(span=21, adjust=False).mean()
             
-            # Calcular RSI
+            # Calcular RSI de 14 períodos
             delta = df['close'].diff()
-            gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-            loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
-            rs = gain / loss
+            gain = delta.where(delta > 0, 0)
+            loss = -delta.where(delta < 0, 0)
+            avg_gain = gain.rolling(window=14).mean()
+            avg_loss = loss.rolling(window=14).mean()
+            rs = avg_gain / avg_loss
             df['rsi'] = 100 - (100 / (1 + rs))
             
             # Calcular MACD
-            df['ema12'] = df['close'].ewm(span=12, adjust=False).mean()
-            df['ema26'] = df['close'].ewm(span=26, adjust=False).mean()
-            df['macd'] = df['ema12'] - df['ema26']
+            ema12 = df['close'].ewm(span=12, adjust=False).mean()
+            ema26 = df['close'].ewm(span=26, adjust=False).mean()
+            df['macd'] = ema12 - ema26
             df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
             df['macd_hist'] = df['macd'] - df['macd_signal']
             
-            # Calcular Bollinger Bands
-            df['sma20'] = df['close'].rolling(window=20).mean()
-            df['std20'] = df['close'].rolling(window=20).std()
-            df['upper_band'] = df['sma20'] + (df['std20'] * 2)
-            df['lower_band'] = df['sma20'] - (df['std20'] * 2)
+            # Calcular Bandas de Bollinger
+            df['middle_band'] = df['close'].rolling(window=20).mean()
+            std = df['close'].rolling(window=20).std()
+            df['upper_band'] = df['middle_band'] + (std * 2)
+            df['lower_band'] = df['middle_band'] - (std * 2)
             
             # Calcular ATR
-            df['tr1'] = abs(df['high'] - df['low'])
-            df['tr2'] = abs(df['high'] - df['close'].shift(1))
-            df['tr3'] = abs(df['low'] - df['close'].shift(1))
-            df['tr'] = df[['tr1', 'tr2', 'tr3']].max(axis=1)
-            df['atr'] = df['tr'].rolling(14).mean()
+            high_low = df['high'] - df['low']
+            high_close = (df['high'] - df['close'].shift()).abs()
+            low_close = (df['low'] - df['close'].shift()).abs()
+            ranges = pd.concat([high_low, high_close, low_close], axis=1)
+            true_range = ranges.max(axis=1)
+            df['atr'] = true_range.rolling(window=14).mean()
             
             logger.info("Indicadores técnicos calculados")
             return df
@@ -301,8 +304,15 @@ class AdaptiveBot:
             return None
         
         try:
+            # Verificar que el DataFrame tenga suficientes datos
+            if len(df) < 200:  # Necesitamos al menos 200 filas para SMA200
+                logger.warning("Datos insuficientes para predicción ML")
+                return None
+                
+            # Imprimir las columnas disponibles para depuración
+            logger.info(f"Columnas disponibles: {df.columns.tolist()}")
+            
             # Crear un nuevo DataFrame con las columnas que espera el modelo
-            # Esto es necesario porque el modelo espera columnas específicas
             model_df = pd.DataFrame()
             
             # Calcular medias móviles simples
@@ -317,8 +327,13 @@ class AdaptiveBot:
             model_df['macd_histogram'] = df['macd_hist'].iloc[-1]
             
             # Bandas de Bollinger
+            # Usar middle_band si está disponible, de lo contrario calcularla
+            if 'middle_band' in df.columns:
+                model_df['bb_middle'] = df['middle_band'].iloc[-1]
+            else:
+                model_df['bb_middle'] = df['close'].rolling(window=20).mean().iloc[-1]
+                
             model_df['bb_upper'] = df['upper_band'].iloc[-1]
-            model_df['bb_middle'] = df['middle_band'].iloc[-1]
             model_df['bb_lower'] = df['lower_band'].iloc[-1]
             
             # ATR y otros indicadores
