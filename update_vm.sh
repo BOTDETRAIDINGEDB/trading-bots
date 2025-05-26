@@ -76,8 +76,35 @@ echo -e "${YELLOW}6. Configurando permisos de ejecución...${NC}"
 find "$NEW_PROJECT_DIR" -name "*.sh" -exec chmod +x {} \;
 echo -e "${GREEN}   Permisos configurados${NC}"
 
-# 7. Crear script de inicio para el bot SOL con reentrenamiento
-echo -e "${YELLOW}7. Creando script de inicio para el bot SOL...${NC}"
+# 7. Crear archivo .env de ejemplo si no existe
+echo -e "${YELLOW}7. Verificando archivo .env...${NC}"
+ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_20m/.env"
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${YELLOW}   Creando archivo .env de ejemplo...${NC}"
+    cat > "$ENV_FILE" << 'EOF'
+# Configuración para el bot SOL con reentrenamiento
+
+# Credenciales de Binance
+BINANCE_API_KEY=tu_api_key_aqui
+BINANCE_API_SECRET=tu_api_secret_aqui
+
+# Configuración de Telegram
+TELEGRAM_BOT_TOKEN=tu_token_de_bot_aqui
+TELEGRAM_CHAT_ID=tu_chat_id_aqui
+
+# Configuración de la API
+API_URL=http://localhost:5000
+BOT_ID=sol_bot_20m
+API_SECRET_KEY=tu_clave_secreta_aqui
+EOF
+    echo -e "${YELLOW}   IMPORTANTE: Debes editar el archivo .env con tus credenciales${NC}"
+    echo -e "${YELLOW}   Ubicación: $ENV_FILE${NC}"
+else
+    echo -e "${GREEN}   Archivo .env encontrado${NC}"
+fi
+
+# 8. Crear script de inicio para el bot SOL con reentrenamiento
+echo -e "${YELLOW}8. Creando script de inicio para el bot SOL...${NC}"
 START_SCRIPT="${NEW_PROJECT_DIR}/start_sol_bot_20m.sh"
 cat > "$START_SCRIPT" << 'EOF'
 #!/bin/bash
@@ -103,7 +130,7 @@ EOF
 chmod +x "$START_SCRIPT"
 echo -e "${GREEN}   Script de inicio creado en $START_SCRIPT${NC}"
 
-# 8. Mostrar instrucciones finales
+# 9. Mostrar instrucciones finales
 echo -e "${YELLOW}=== Actualización completada ===${NC}"
 echo -e "${GREEN}Para iniciar el bot SOL con reentrenamiento:${NC}"
 echo -e "   ${YELLOW}$START_SCRIPT${NC}"
@@ -111,3 +138,10 @@ echo -e "${GREEN}Para ver los logs del bot:${NC}"
 echo -e "   ${YELLOW}screen -r sol_bot_20m${NC}"
 echo -e "${GREEN}Para salir de la vista de logs (sin detener el bot):${NC}"
 echo -e "   ${YELLOW}Presiona Ctrl+A y luego D${NC}"
+
+# Recordatorio sobre el archivo .env
+ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_20m/.env"
+echo -e "\n${YELLOW}IMPORTANTE: Asegúrate de configurar correctamente el archivo .env${NC}"
+echo -e "${YELLOW}Ubicación: $ENV_FILE${NC}"
+echo -e "${YELLOW}Debe contener:${NC}"
+echo -e "   - BINANCE_API_KEY y BINANCE_API_SECRET\n   - TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID\n   - API_URL, BOT_ID y API_SECRET_KEY"
