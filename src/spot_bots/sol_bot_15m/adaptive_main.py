@@ -45,7 +45,7 @@ class AdaptiveBot:
     """Bot de trading SOL con estrategia adaptativa."""
     
     def __init__(self, symbol='SOLUSDT', interval='15m', lookback=90, 
-                 balance=1000, risk=0.02, stop_loss=0.06, simulation=True, 
+                 balance=100, risk=0.02, stop_loss=0.06, simulation=True, 
                  use_ml=True, retrain_interval=1440):
         """
         Inicializa el bot adaptativo.
@@ -82,6 +82,31 @@ class AdaptiveBot:
         
         # Inicializar analizador de mercado
         self.market_analyzer = MarketAnalyzer(symbol=symbol)
+        
+        # En modo simulación, establecer el balance inicial
+        # y asegurarse de que se guarde en el archivo de estado
+        if simulation:
+            # Intentar cargar el balance desde el archivo de estado
+            if os.path.exists(self.state_file):
+                try:
+                    with open(self.state_file, 'r') as f:
+                        state_data = json.load(f)
+                        if 'current_balance' in state_data and state_data['current_balance'] > 0:
+                            self.balance = state_data['current_balance']
+                            logger.info(f"Balance cargado desde archivo de estado: {self.balance} USDT")
+                except Exception as e:
+                    logger.error(f"Error al cargar balance desde archivo de estado: {str(e)}")
+            
+            logger.info(f"Modo simulación activado con balance inicial: {self.balance} USDT")
+        else:
+            # En modo real, obtener balance de Binance
+            try:
+                real_balance = self.binance.get_balance('USDT')
+                if real_balance > 0:
+                    self.balance = real_balance
+                    logger.info(f"Balance real obtenido de Binance: {self.balance} USDT")
+            except Exception as e:
+                logger.error(f"Error al obtener balance real: {str(e)}")
         
         # Inicializar estrategia adaptativa
         self.strategy = AdaptiveStrategy(
@@ -459,11 +484,33 @@ class AdaptiveBot:
             float: Balance actual en USDT.
         """
         if self.simulation:
-            # En simulación, usar el balance de la estrategia
-            return self.strategy.current_balance
+            # En simulación, obtener el balance actual de la estrategia
+            # Este balance se actualiza con ganancias/pérdidas de operaciones
+            balance = self.strategy.current_balance
+            
+            # Si el balance no está inicializado, usar el balance inicial
+            if balance <= 0:
+                balance = self.balance
+                self.strategy.set_balance(balance)
+                logger.info(f"Balance de simulación inicializado a {balance} USDT")
+                
+                # Guardar el balance inicial en el archivo de estado
+                self.save_state()
+                
+            return balance
         else:
             # En modo real, obtener balance de Binance
-            return self.binance.get_balance('USDT')
+            try:
+                balance = self.binance.get_balance('USDT')
+                if balance <= 0:
+                    # Si no se puede obtener el balance real, usar el balance configurado
+                    balance = self.balance
+                    logger.warning(f"No se pudo obtener balance real, usando balance configurado: {balance} USDT")
+                return balance
+            except Exception as e:
+                logger.error(f"Error al obtener balance de Binance: {str(e)}")
+                # En caso de error, usar el balance configurado
+                return self.balance
     
     def run_iteration(self):
         """
@@ -497,7 +544,18 @@ class AdaptiveBot:
             current_balance = self.get_current_balance()
             
             # Actualizar balance en la estrategia
-            self.strategy.set_balance(current_balance)
+            if current_balance > 0:
+                # Solo actualizar si hay un cambio significativo para evitar logs excesivos
+                if abs(current_balance - self.strategy.current_balance) > 0.01:
+                    logger.info(f"Balance actualizado: {current_balance} USDT (anterior: {self.strategy.current_balance} USDT)")
+                self.strategy.set_balance(current_balance)
+                
+                # Actualizar el balance del bot para futuras referencias
+                self.balance = current_balance
+            else:
+                # Si el balance es 0 o negativo, usar el balance configurado
+                self.strategy.set_balance(self.balance)
+                logger.warning(f"Balance inválido ({current_balance}), usando balance configurado: {self.balance} USDT")
             
             # Notificar actualización de mercado cada 15 minutos (1 vela de 15 min)
             current_time = datetime.now()
