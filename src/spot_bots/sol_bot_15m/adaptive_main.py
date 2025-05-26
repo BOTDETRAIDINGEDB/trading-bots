@@ -70,6 +70,9 @@ class AdaptiveBot:
         self.use_ml = use_ml
         self.retrain_interval = retrain_interval
         
+        # Definir archivo de estado
+        self.state_file = 'sol_bot_15min_state.json'
+        
         # Cargar credenciales desde credentials.json
         from utils.credentials_loader import load_credentials
         load_credentials()
