@@ -350,14 +350,15 @@ class AdaptiveBot:
             # Obtener la última fila con todos los indicadores
             last_row = df.iloc[-1:]
             
-            # Crear un nuevo DataFrame con las columnas requeridas
+            # Crear un nuevo DataFrame con las columnas requeridas y el precio de cierre
             features = last_row[required_columns].copy()
+            features['close'] = df['close'].iloc[-1]  # Añadir el precio de cierre
             
             # Añadir ratios adicionales
             features['sma_20_50_ratio'] = features['sma_20'] / features['sma_50']
             features['sma_20_200_ratio'] = features['sma_20'] / features['sma_200']
-            features['price_to_bb_upper'] = df['close'].iloc[-1] / features['bb_upper']
-            features['price_to_bb_lower'] = df['close'].iloc[-1] / features['bb_lower']
+            features['price_to_bb_upper'] = features['close'] / features['bb_upper']
+            features['price_to_bb_lower'] = features['close'] / features['bb_lower']
             
             # Obtener predicción usando el modelo
             prediction = self.strategy.ml_model.predict(features)
