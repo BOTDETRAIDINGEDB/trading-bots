@@ -301,27 +301,42 @@ class AdaptiveBot:
             return None
         
         try:
-            # Verificar que todas las columnas necesarias estén presentes
-            required_columns = ['ema8', 'ema21', 'rsi', 'macd', 'macd_signal', 'atr']
-            for col in required_columns:
-                if col not in df.columns:
-                    logger.error(f"Columna {col} no encontrada en el DataFrame")
-                    return None
+            # Crear un nuevo DataFrame con las columnas que espera el modelo
+            # Esto es necesario porque el modelo espera columnas específicas
+            model_df = pd.DataFrame()
             
-            # Verificar que el DataFrame tenga al menos una fila
-            if len(df) == 0:
-                logger.error("DataFrame vacío, no se puede hacer predicción")
-                return None
+            # Calcular medias móviles simples
+            model_df['sma_20'] = df['close'].rolling(window=20).mean().iloc[-1]
+            model_df['sma_50'] = df['close'].rolling(window=50).mean().iloc[-1]
+            model_df['sma_200'] = df['close'].rolling(window=200).mean().iloc[-1]
             
-            # Preparar datos para el modelo
-            # Usar .iloc[-1:] para obtener el último registro como un DataFrame
-            last_row = df.iloc[-1:]
+            # Usar RSI y MACD ya calculados
+            model_df['rsi_14'] = df['rsi'].iloc[-1]
+            model_df['macd'] = df['macd'].iloc[-1]
+            model_df['macd_signal'] = df['macd_signal'].iloc[-1]
+            model_df['macd_histogram'] = df['macd_hist'].iloc[-1]
             
-            # Seleccionar solo las columnas necesarias
-            features = last_row[required_columns].values
+            # Bandas de Bollinger
+            model_df['bb_upper'] = df['upper_band'].iloc[-1]
+            model_df['bb_middle'] = df['middle_band'].iloc[-1]
+            model_df['bb_lower'] = df['lower_band'].iloc[-1]
             
-            # Obtener predicción
-            prediction = self.strategy.ml_model.predict(features)
+            # ATR y otros indicadores
+            model_df['atr_14'] = df['atr'].iloc[-1]
+            model_df['relative_volume'] = df['volume'].iloc[-1] / df['volume'].rolling(window=20).mean().iloc[-1]
+            model_df['pct_change'] = df['close'].pct_change().iloc[-1]
+            
+            # Calcular ratios adicionales
+            model_df['sma_20_50_ratio'] = model_df['sma_20'] / model_df['sma_50']
+            model_df['sma_20_200_ratio'] = model_df['sma_20'] / model_df['sma_200']
+            model_df['price_to_bb_upper'] = df['close'].iloc[-1] / model_df['bb_upper']
+            model_df['price_to_bb_lower'] = df['close'].iloc[-1] / model_df['bb_lower']
+            
+            # Convertir a DataFrame
+            model_df = pd.DataFrame([model_df.values[0]], columns=model_df.columns)
+            
+            # Obtener predicción usando el modelo
+            prediction = self.strategy.ml_model.predict(model_df)
             
             # Convertir a entero si es un array
             if hasattr(prediction, 'item'):
