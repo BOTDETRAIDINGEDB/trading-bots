@@ -105,7 +105,7 @@ fi
 
 # 8. Crear script de inicio para el bot SOL con reentrenamiento
 echo -e "${YELLOW}8. Creando script de inicio para el bot SOL...${NC}"
-START_SCRIPT="${NEW_PROJECT_DIR}/start_sol_bot_20m.sh"
+START_SCRIPT="${NEW_PROJECT_DIR}/start_sol_bot_15m.sh"
 cat > "$START_SCRIPT" << 'EOF'
 #!/bin/bash
 # Script para iniciar el bot SOL con reentrenamiento cada 20 minutos
