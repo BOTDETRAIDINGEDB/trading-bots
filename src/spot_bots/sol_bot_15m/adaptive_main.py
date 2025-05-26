@@ -13,7 +13,6 @@ import json
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from dotenv import load_dotenv
 
 # Ajustar el PYTHONPATH para encontrar los módulos correctamente
 bot_dir = os.path.dirname(os.path.abspath(__file__))
@@ -71,8 +70,9 @@ class AdaptiveBot:
         self.use_ml = use_ml
         self.retrain_interval = retrain_interval
         
-        # Cargar variables de entorno
-        load_dotenv()
+        # Cargar credenciales desde credentials.json
+        from utils.credentials_loader import load_credentials
+        load_credentials()
         
         # Inicializar notificador mejorado de Telegram
         self.telegram = EnhancedTelegramNotifier()
