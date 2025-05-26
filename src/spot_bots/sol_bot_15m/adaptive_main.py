@@ -499,6 +499,7 @@ def parse_arguments():
     parser.add_argument('--stop-loss', type=float, default=0.06, help='Stop loss (0.06 = 6%%)')
     parser.add_argument('--simulation', action='store_true', help='Operar en modo simulación')
     parser.add_argument('--no-ml', action='store_true', help='No utilizar modelo de ML')
+    parser.add_argument('--use-ml', action='store_true', help='Utilizar modelo de ML (opuesto a --no-ml)')
     parser.add_argument('--retrain-interval', type=int, default=1440, help='Intervalo de reentrenamiento en minutos')
     return parser.parse_args()
 
@@ -511,6 +512,9 @@ def main():
     args = parse_arguments()
     
     # Inicializar bot
+    # Si --use-ml está presente, tiene prioridad sobre --no-ml
+    use_ml = True if args.use_ml else not args.no_ml
+    
     bot = AdaptiveBot(
         symbol=args.symbol,
         interval=args.interval,
@@ -519,7 +523,7 @@ def main():
         risk=args.risk,
         stop_loss=args.stop_loss,
         simulation=args.simulation,
-        use_ml=not args.no_ml,
+        use_ml=use_ml,
         retrain_interval=args.retrain_interval
     )
     
