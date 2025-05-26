@@ -21,7 +21,7 @@ class APIClient:
             secret_key (str, optional): Clave secreta para autenticación. Si no se proporciona, se busca en variables de entorno.
         """
         self.api_url = api_url or os.getenv('API_URL', 'http://localhost:5000')
-        self.bot_id = bot_id or os.getenv('BOT_ID', 'sol_bot_20m')
+        self.bot_id = bot_id or os.getenv('BOT_ID', 'sol_bot_15m')
         self.secret_key = secret_key or os.getenv('API_SECRET_KEY')
         
         if not self.secret_key:

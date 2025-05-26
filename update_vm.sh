@@ -27,7 +27,7 @@ fi
 # 2. Detener bots en ejecución
 echo -e "${YELLOW}2. Deteniendo bots en ejecución...${NC}"
 # Identificar sesiones de screen
-SCREEN_SESSIONS=$(screen -ls | grep -oE "[0-9]+\.sol_bot_20m")
+SCREEN_SESSIONS=$(screen -ls | grep -oE "[0-9]+\.sol_bot_15m")
 if [ -n "$SCREEN_SESSIONS" ]; then
     for session in $SCREEN_SESSIONS; do
         echo -e "   Deteniendo sesión: $session"
@@ -78,7 +78,7 @@ echo -e "${GREEN}   Permisos configurados${NC}"
 
 # 7. Crear archivo .env de ejemplo si no existe
 echo -e "${YELLOW}7. Verificando archivo .env...${NC}"
-ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_20m/.env"
+ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_15m/.env"
 if [ ! -f "$ENV_FILE" ]; then
     echo -e "${YELLOW}   Creando archivo .env de ejemplo...${NC}"
     cat > "$ENV_FILE" << 'EOF'
@@ -94,7 +94,7 @@ TELEGRAM_CHAT_ID=tu_chat_id_aqui
 
 # Configuración de la API
 API_URL=http://localhost:5000
-BOT_ID=sol_bot_20m
+BOT_ID=sol_bot_15m
 API_SECRET_KEY=tu_clave_secreta_aqui
 EOF
     echo -e "${YELLOW}   IMPORTANTE: Debes editar el archivo .env con tus credenciales${NC}"
@@ -114,7 +114,7 @@ cat > "$START_SCRIPT" << 'EOF'
 source ~/.bashrc
 
 # Directorio del bot
-BOT_DIR="/home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_20m"
+BOT_DIR="/home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_15m"
 
 # Crear directorio de logs si no existe
 mkdir -p "$BOT_DIR/logs"
@@ -136,12 +136,12 @@ echo -e "${YELLOW}=== Actualización completada ===${NC}"
 echo -e "${GREEN}Para iniciar el bot SOL con reentrenamiento:${NC}"
 echo -e "   ${YELLOW}$START_SCRIPT${NC}"
 echo -e "${GREEN}Para ver los logs del bot:${NC}"
-echo -e "   ${YELLOW}screen -r sol_bot_20m${NC}"
+echo -e "   ${YELLOW}screen -r sol_bot_15m${NC}"
 echo -e "${GREEN}Para salir de la vista de logs (sin detener el bot):${NC}"
 echo -e "   ${YELLOW}Presiona Ctrl+A y luego D${NC}"
 
 # Recordatorio sobre el archivo .env
-ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_20m/.env"
+ENV_FILE="${NEW_PROJECT_DIR}/src/spot_bots/sol_bot_15m/.env"
 echo -e "\n${YELLOW}IMPORTANTE: Asegúrate de configurar correctamente el archivo .env${NC}"
 echo -e "${YELLOW}Ubicación: $ENV_FILE${NC}"
 echo -e "${YELLOW}Debe contener:${NC}"

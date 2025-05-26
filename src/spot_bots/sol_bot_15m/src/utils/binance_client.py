@@ -33,7 +33,7 @@ class BinanceAPI:
         
         Args:
             symbol (str): Par de trading (ej. 'SOLUSDT').
-            interval (str): Intervalo de tiempo (ej. '20m', '1h', '1d').
+            interval (str): Intervalo de tiempo (ej. '15m', '1h', '1d').
             start_time (int, optional): Tiempo de inicio en milisegundos.
             end_time (int, optional): Tiempo de fin en milisegundos.
             limit (int, optional): Número máximo de velas a obtener.
