@@ -194,17 +194,52 @@ class MLModel:
             return None
         
         try:
+            # Verificar si el modelo está entrenado
+            from sklearn.exceptions import NotFittedError
+            
             # Preparar características
             X = self.prepare_features(df)
             
-            # Realizar predicciones
-            predictions = self.model.predict(X)
-            
-            logger.info(f"Predicciones realizadas para {len(predictions)} muestras.")
-            return predictions
+            try:
+                # Intentar realizar predicciones
+                predictions = self.model.predict(X)
+                logger.info(f"Predicciones realizadas para {len(predictions)} muestras.")
+                return predictions
+            except (NotFittedError, ValueError) as fit_error:
+                # Capturar específicamente errores de modelo no entrenado
+                if "not fitted" in str(fit_error):
+                    logger.warning("Modelo no entrenado. Iniciando entrenamiento automático...")
+                    
+                    # Generar etiquetas para entrenamiento
+                    # Usar una estrategia simple basada en el movimiento del precio
+                    target = np.zeros(len(df))
+                    price_changes = df['close'].pct_change().shift(-1).fillna(0).values
+                    
+                    # Asignar 1 (compra) si el precio sube, -1 (venta) si baja
+                    target[price_changes > 0.001] = 1  # Subida significativa
+                    target[price_changes < -0.001] = -1  # Bajada significativa
+                    
+                    # Entrenar el modelo con los datos disponibles
+                    self.model.fit(X, target)
+                    self.last_trained = datetime.now()
+                    
+                    # Guardar el modelo entrenado
+                    self.save_model()
+                    
+                    logger.info("Modelo entrenado automáticamente con éxito")
+                    
+                    # Realizar predicciones con el modelo recién entrenado
+                    predictions = self.model.predict(X)
+                    logger.info(f"Predicciones realizadas después del entrenamiento automático: {len(predictions)} muestras")
+                    return predictions
+                else:
+                    # Otro tipo de error relacionado con el modelo
+                    raise
             
         except Exception as e:
             logger.error(f"Error al realizar predicciones: {str(e)}")
+            import traceback
+            logger.debug(f"Traceback completo: {traceback.format_exc()}")
             return None
     
     def should_retrain(self, last_data_update):
