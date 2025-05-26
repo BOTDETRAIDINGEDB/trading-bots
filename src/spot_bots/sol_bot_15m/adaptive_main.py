@@ -131,22 +131,39 @@ class AdaptiveBot:
     
     def notify_bot_start(self):
         """Notifica el inicio del bot por Telegram."""
-        # Obtener precio actual
-        df = self.get_historical_data()
-        current_price = df['close'].iloc[-1] if df is not None else 0
-        
-        config = {
-            'symbol': self.symbol,
-            'interval': self.interval,
-            'stop_loss': self.stop_loss,
-            'risk': self.risk,
-            'simulation': self.simulation,
-            'use_ml': self.use_ml,
-            'balance': self.balance,
-            'current_price': current_price
-        }
-        
-        self.telegram.notify_bot_start(config)
+        try:
+            # Obtener precio actual
+            df = self.get_historical_data()
+            current_price = df['close'].iloc[-1] if df is not None else 0
+            
+            config = {
+                'symbol': self.symbol,
+                'interval': self.interval,
+                'stop_loss': self.stop_loss,
+                'risk': self.risk,
+                'simulation': self.simulation,
+                'use_ml': self.use_ml,
+                'balance': self.balance,
+                'current_price': current_price
+            }
+            
+            # Intentar enviar la notificación con reintentos
+            success = self.telegram.notify_bot_start(config)
+            if success:
+                logger.info("Notificación de inicio enviada correctamente")
+            else:
+                logger.warning("No se pudo enviar la notificación de inicio")
+                
+                # Intentar enviar un mensaje simple como alternativa
+                simple_message = f"\ud83e\udd16 BOT SOL INICIADO - Balance: {self.balance} USDT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                self.telegram.send_message(simple_message)
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de inicio: {str(e)}")
+            # Último intento con mensaje mínimo
+            try:
+                self.telegram.send_message("\ud83e\udd16 BOT SOL INICIADO")
+            except:
+                pass
     
     def load_state(self):
         """
