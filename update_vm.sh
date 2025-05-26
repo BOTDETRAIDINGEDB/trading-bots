@@ -121,7 +121,7 @@ mkdir -p "$BOT_DIR/logs"
 
 # Iniciar el bot en una sesión de screen
 cd "$BOT_DIR"
-screen -dmS sol_bot_20m python main.py --use-ml --retrain-interval 20 --interval 20m --symbol SOLUSDT
+screen -dmS sol_bot_20m python3 main.py --use-ml --retrain-interval 20 --interval 20m --symbol SOLUSDT
 
 echo "Bot SOL iniciado en sesión screen 'sol_bot_20m'"
 echo "Para ver los logs: screen -r sol_bot_20m"
