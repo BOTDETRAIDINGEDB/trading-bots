@@ -220,6 +220,7 @@ class AdaptiveBot:
             df['macd'] = ema12 - ema26
             df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
             df['macd_hist'] = df['macd'] - df['macd_signal']
+            df['macd_histogram'] = df['macd_hist']  # Alias para compatibilidad con el modelo ML
             
             # Calcular Bandas de Bollinger
             # Usar nombres consistentes con lo que espera el modelo ML
@@ -337,7 +338,7 @@ class AdaptiveBot:
             
             # Verificar que todas las columnas necesarias estén presentes
             required_columns = [
-                'sma_20', 'sma_50', 'sma_200', 'rsi_14', 'macd', 'macd_signal', 'macd_hist',
+                'sma_20', 'sma_50', 'sma_200', 'rsi_14', 'macd', 'macd_signal', 'macd_histogram',
                 'bb_upper', 'bb_middle', 'bb_lower', 'atr_14', 'relative_volume', 'pct_change'
             ]
             
