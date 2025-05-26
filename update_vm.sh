@@ -121,10 +121,10 @@ mkdir -p "$BOT_DIR/logs"
 
 # Iniciar el bot en una sesión de screen con redirección de errores
 cd "$BOT_DIR"
-screen -dmS sol_bot_20m bash -c "python3 main.py --use-ml --retrain-interval 20 --interval 20m --symbol SOLUSDT 2> logs/error.log"
+screen -dmS sol_bot_15m bash -c "python3 main.py --use-ml --retrain-interval 20 --interval 15m --symbol SOLUSDT 2> logs/error.log"
 
-echo "Bot SOL iniciado en sesión screen 'sol_bot_20m'"
-echo "Para ver los logs: screen -r sol_bot_20m"
+echo "Bot SOL iniciado en sesión screen 'sol_bot_15m'"
+echo "Para ver los logs: screen -r sol_bot_15m"
 echo "Para ver errores: cat $BOT_DIR/logs/error.log"
 EOF
 
