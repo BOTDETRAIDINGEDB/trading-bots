@@ -221,7 +221,32 @@ class PerformanceMonitor:
             bool: True si se envió correctamente, False en caso contrario.
         """
         if analysis['total_trades'] == 0:
-            message = "📊 *Resumen de Rendimiento - Bot SOL*\n\nNo hay operaciones para analizar."
+            # Verificar si ya se envió un mensaje similar recientemente
+            last_message_file = os.path.join(self.report_dir, 'last_empty_message.txt')
+            current_time = datetime.now()
+            
+            # Si existe el archivo, verificar cuándo fue la última notificación
+            if os.path.exists(last_message_file):
+                try:
+                    with open(last_message_file, 'r') as f:
+                        last_time_str = f.read().strip()
+                        last_time = datetime.fromisoformat(last_time_str)
+                        
+                        # Solo enviar mensaje si han pasado al menos 4 horas desde el último
+                        if (current_time - last_time).total_seconds() < 14400:  # 4 horas = 14400 segundos
+                            logger.info("Omitiendo mensaje vacío (enviado recientemente)")
+                            return True
+                except Exception as e:
+                    logger.error(f"Error al leer archivo de última notificación: {str(e)}")
+            
+            # Guardar el tiempo actual como la última notificación
+            try:
+                with open(last_message_file, 'w') as f:
+                    f.write(current_time.isoformat())
+            except Exception as e:
+                logger.error(f"Error al guardar tiempo de notificación: {str(e)}")
+            
+            message = "📊 *Resumen de Rendimiento - Bot SOL*\n\nNo hay operaciones para analizar.\n\n_Nota: Este mensaje se enviará como máximo cada 4 horas._"
             return self.telegram.send_message(message)
         
         message = f"""📊 *Resumen de Rendimiento - Bot SOL*
