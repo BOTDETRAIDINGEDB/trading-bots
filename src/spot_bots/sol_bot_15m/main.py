@@ -6,6 +6,7 @@ import logging.handlers
 import argparse
 import json
 import sys
+import signal
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
