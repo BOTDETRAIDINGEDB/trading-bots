@@ -57,12 +57,16 @@ echo "==================================================================="
 echo "  Logs: $LOG_FILE"
 echo "==================================================================="
 
-# Verificar instalación de dependencias críticas
-python3 -c "import tensorflow as tf; print('TensorFlow instalado: versión', tf.__version__)" || {
-    echo "ERROR: TensorFlow no está instalado correctamente"
-    echo "Instala TensorFlow con: pip install tensorflow"
-    exit 1
-}
+# Verificación de TensorFlow desactivada temporalmente
+echo "AVISO: Verificación de TensorFlow desactivada temporalmente."
+echo "El bot funcionará con capacidades básicas sin ML."
+
+# Comentado para permitir ejecución sin TensorFlow
+# python3 -c "import tensorflow as tf; print('TensorFlow instalado: versión', tf.__version__)" || {
+#     echo "ERROR: TensorFlow no está instalado correctamente"
+#     echo "Instala TensorFlow con: pip install tensorflow"
+#     exit 1
+# }
 
 # Iniciar el bot con los parámetros configurados
 cd "$BOT_DIR"
