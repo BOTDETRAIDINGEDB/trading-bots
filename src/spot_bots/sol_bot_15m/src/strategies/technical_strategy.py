@@ -2,6 +2,7 @@
 import logging
 import json
 import os
+import pandas as pd
 from datetime import datetime
 
 # Importar el modelo de ML
@@ -399,37 +400,160 @@ class TechnicalStrategy:
     
     def process_with_ml(self, df):
         """
-        Procesa los datos con el modelo de ML y devuelve las predicciones.
+        Procesa los datos con el modelo de ML.
         
         Args:
-            df (pandas.DataFrame): DataFrame con datos e indicadores.
+            df (DataFrame): DataFrame con los datos procesados.
             
         Returns:
-            tuple: (predicciones, métricas de entrenamiento si se reentrenó)
+            tuple: (predicción, métricas de reentrenamiento si se reentrena el modelo)
         """
         if not self.use_ml or self.ml_model is None:
+            logger.warning("Modelo de ML no habilitado o no inicializado")
             return None, None
         
+        # Guardar el DataFrame para uso futuro
+        self.df = df
+        
+        # Verificar si es necesario reentrenar el modelo
+        retrain_metrics = None
+        if self.should_retrain_model():
+            logger.info("Reentrenando modelo de ML con datos actualizados...")
+            retrain_metrics = self.ml_model.train(df)
+            self.last_train_time = datetime.now()
+            logger.info(f"Modelo reentrenado. Métricas: {retrain_metrics}")
+        
+        # Realizar predicción
+        prediction = self.ml_model.predict(df)
+        logger.info(f"Predicción ML para última vela: {prediction}")
+        
+        return prediction, retrain_metrics
+        
+    def get_trend_strength(self):
+        """
+        Calcula la fuerza de la tendencia actual basada en los datos disponibles.
+        
+        Returns:
+            float: Valor entre -1 y 1 que indica la fuerza y dirección de la tendencia.
+                  Valores positivos indican tendencia alcista, negativos tendencia bajista.
+        """
+        if not hasattr(self, 'df') or self.df is None or self.df.empty:
+            return 0.0
+            
         try:
-            # Verificar si debemos reentrenar el modelo
-            last_data_update = df.index[-1].to_pydatetime() if not df.empty else datetime.now()
-            retrain_metrics = None
-            
-            if self.ml_model.should_retrain(last_data_update):
-                logger.info("Reentrenando modelo de ML con datos actualizados...")
-                retrain_metrics = self.ml_model.train(df)
-                logger.info(f"Modelo reentrenado. Métricas: {retrain_metrics}")
-            
-            # Realizar predicciones con el modelo
-            predictions = self.ml_model.predict(df)
-            
-            if predictions is not None and len(predictions) > 0:
-                logger.info(f"Predicción ML para última vela: {predictions[-1]}")
-                return predictions[-1], retrain_metrics
-            else:
-                return None, retrain_metrics
+            # Usar las últimas 20 velas para calcular la tendencia
+            df_tail = self.df.tail(20)
+            if len(df_tail) < 5:  # Necesitamos al menos 5 velas para un cálculo significativo
+                return 0.0
                 
+            # Calcular la tendencia basada en la diferencia porcentual entre el primer y último precio
+            first_price = df_tail['close'].iloc[0]
+            last_price = df_tail['close'].iloc[-1]
+            
+            if first_price <= 0:
+                return 0.0
+                
+            # Calcular el cambio porcentual y normalizar a un rango de -1 a 1
+            percent_change = (last_price - first_price) / first_price
+            
+            # Limitar a un rango de -1 a 1
+            trend_strength = max(-1.0, min(1.0, percent_change * 5))  # Multiplicar por 5 para amplificar cambios pequeños
+            
+            return trend_strength
         except Exception as e:
+            logger.error(f"Error al calcular la fuerza de la tendencia: {str(e)}")
+            return 0.0
+    
+    def get_volatility(self):
+        """
+        Calcula la volatilidad del mercado basada en los datos disponibles.
+        
+        Returns:
+            float: Valor entre 0 y 1 que indica el nivel de volatilidad del mercado.
+        """
+        if not hasattr(self, 'df') or self.df is None or self.df.empty:
+            return 0.5
+            
+        try:
+            # Usar las últimas 20 velas para calcular la volatilidad
+            df_tail = self.df.tail(20)
+            if len(df_tail) < 5:  # Necesitamos al menos 5 velas para un cálculo significativo
+                return 0.5
+                
+            # Calcular la volatilidad como el rango porcentual entre el máximo y mínimo
+            highest_high = df_tail['high'].max()
+            lowest_low = df_tail['low'].min()
+            
+            if lowest_low <= 0:
+                return 0.5
+                
+            # Calcular el rango porcentual
+            range_percent = (highest_high - lowest_low) / lowest_low
+            
+            # Normalizar a un rango de 0 a 1
+            volatility = min(1.0, range_percent)
+            
+            return volatility
+        except Exception as e:
+            logger.error(f"Error al calcular la volatilidad: {str(e)}")
+            return 0.5
+    
+    def get_rsi(self):
+        """
+        Obtiene el valor actual del RSI (Relative Strength Index).
+        
+        Returns:
+            float: Valor del RSI entre 0 y 100.
+        """
+        if not hasattr(self, 'df') or self.df is None or self.df.empty or 'rsi' not in self.df.columns:
+            return 50.0
+            
+        try:
+            # Obtener el último valor de RSI
+            last_rsi = self.df['rsi'].iloc[-1]
+            
+            # Asegurarse de que esté en el rango correcto
+            if pd.isna(last_rsi):
+                return 50.0
+                
+            return float(last_rsi)
+        except Exception as e:
+            logger.error(f"Error al obtener el RSI: {str(e)}")
+            return 50.0
+    
+    def get_volume_change(self):
+        """
+        Calcula el cambio porcentual del volumen actual respecto al promedio.
+        
+        Returns:
+            float: Valor entre -1 y 1 que indica el cambio de volumen.
+        """
+        if not hasattr(self, 'df') or self.df is None or self.df.empty or 'volume' not in self.df.columns:
+            return 0.0
+            
+        try:
+            # Usar las últimas 20 velas para calcular el cambio de volumen
+            df_tail = self.df.tail(20)
+            if len(df_tail) < 5:  # Necesitamos al menos 5 velas para un cálculo significativo
+                return 0.0
+                
+            # Calcular el promedio de volumen de las últimas 19 velas (excluyendo la última)
+            avg_volume = df_tail['volume'].iloc[:-1].mean()
+            last_volume = df_tail['volume'].iloc[-1]
+            
+            if avg_volume <= 0:
+                return 0.0
+                
+            # Calcular el cambio porcentual
+            volume_change = (last_volume - avg_volume) / avg_volume
+            
+            # Limitar a un rango de -1 a 1
+            volume_change = max(-1.0, min(1.0, volume_change))
+            
+            return volume_change
+        except Exception as e:
+            logger.error(f"Error al calcular el cambio de volumen: {str(e)}")
+            return 0.0
             logger.error(f"Error al procesar datos con ML: {str(e)}")
             return None, None
     
