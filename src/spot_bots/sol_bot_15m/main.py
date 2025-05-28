@@ -74,7 +74,6 @@ def get_interval_seconds(interval):
     return value * interval_map.get(unit, 3600)
 
 # Capturar señales de terminación para una salida limpia
-import signal
 import sys
 
 def signal_handler(sig, frame):
