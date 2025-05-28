@@ -39,8 +39,26 @@ if [ ! -f "$CREDENTIALS_FILE" ]; then
     exit 1
 fi
 
-# Exportar la ruta de credenciales como variable de entorno para que el bot la use
+# Exportar la ruta de credenciales para que el bot la use
 export CREDENTIALS_PATH="$CREDENTIALS_FILE"
+
+# Extraer y exportar las credenciales de Binance directamente
+if [ -f "$CREDENTIALS_FILE" ]; then
+    echo "Extrayendo credenciales de Binance desde $CREDENTIALS_FILE"
+    # Extraer las credenciales usando jq si está disponible, o grep como alternativa
+    if command -v jq &> /dev/null; then
+        BINANCE_API_KEY=$(jq -r '.env.BINANCE_API_KEY' "$CREDENTIALS_FILE")
+        BINANCE_API_SECRET=$(jq -r '.env.BINANCE_API_SECRET' "$CREDENTIALS_FILE")
+    else
+        BINANCE_API_KEY=$(grep -o '"BINANCE_API_KEY"[^,]*' "$CREDENTIALS_FILE" | cut -d '"' -f 4)
+        BINANCE_API_SECRET=$(grep -o '"BINANCE_API_SECRET"[^,]*' "$CREDENTIALS_FILE" | cut -d '"' -f 4)
+    fi
+    
+    # Exportar las variables de entorno
+    export BINANCE_API_KEY="$BINANCE_API_KEY"
+    export BINANCE_API_SECRET="$BINANCE_API_SECRET"
+    echo "Credenciales de Binance configuradas correctamente"
+fi
 
 echo "==================================================================="
 echo "  INICIANDO BOT SOL EN MODO SIMULACIÓN DE APRENDIZAJE"
