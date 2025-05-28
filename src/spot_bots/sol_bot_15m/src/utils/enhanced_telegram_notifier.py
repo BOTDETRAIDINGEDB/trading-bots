@@ -331,8 +331,8 @@ class EnhancedTelegramNotifier:
 • 🛑 Stop Loss: `{config['stop_loss']*100}%` (fijo)
 • 🏁 Take Profit: Adaptativo
 • ⚠️ Riesgo inicial: `{config['risk']*100}%`
-• 🧪 Simulación: {'\u2705' if config['simulation'] else '\u274c'}
-• 🧠 ML activado: {'\u2705' if config['use_ml'] else '\u274c'}
+• 🧪 Simulación: {'✅' if config['simulation'] else '❌'}
+• 🧠 ML activado: {'✅' if config['use_ml'] else '❌'}
 
 💰 *Balance inicial:* `{config['balance']} USDT`
 
@@ -340,7 +340,7 @@ class EnhancedTelegramNotifier:
 
 🔍 *Modo aprendizaje:* Activo (operaciones al 50% hasta alcanzar 55% win rate)
 
-⏰ *Iniciado:* {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+⏰ *Iniciado:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 _Bot esperando señales de entrada..._
 """
