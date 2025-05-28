@@ -166,6 +166,14 @@ echo "Iniciando componentes del bot SOL..."
 # Configurar PYTHONPATH para incluir los directorios necesarios
 PYTHONPATH="$BOT_DIR/src:$BOT_DIR:$HOME/new-trading-bots"
 
+# Detener sesiones existentes si existen para evitar duplicados
+echo "Verificando si existen sesiones previas..."
+if screen -list | grep -q "$BOT_NAME"; then
+    echo "Deteniendo sesión existente '$BOT_NAME'..."
+    screen -S $BOT_NAME -X quit
+    sleep 2  # Esperar a que la sesión se cierre completamente
+fi
+
 # 1. Iniciar el bot principal en una sesión screen
 echo "Iniciando bot principal en sesión screen '$BOT_NAME'..."
 screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 main.py \
@@ -182,6 +190,14 @@ screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 mai
 # 2. Iniciar el componente adaptativo en otra sesión screen
 ADAPTIVE_BOT_NAME="${BOT_NAME}_adaptive"
 ADAPTIVE_LOG_FILE="$BOT_DIR/logs/${BOT_NAME}_adaptive_$(date +%Y%m%d_%H%M%S).log"
+
+# Detener sesión adaptativa existente si existe
+if screen -list | grep -q "$ADAPTIVE_BOT_NAME"; then
+    echo "Deteniendo sesión existente '$ADAPTIVE_BOT_NAME'..."
+    screen -S $ADAPTIVE_BOT_NAME -X quit
+    sleep 2  # Esperar a que la sesión se cierre completamente
+fi
+
 echo "Iniciando componente adaptativo en sesión screen '$ADAPTIVE_BOT_NAME'..."
 screen -dmS $ADAPTIVE_BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 adaptive_main.py \
     --symbol $SYMBOL \

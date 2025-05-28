@@ -65,14 +65,46 @@ class BinanceAPI:
         Returns:
             float: Precio actual o None si hay un error.
         """
-        try:
-            ticker = self.client.get_symbol_ticker(symbol=symbol)
-            price = float(ticker['price'])
-            logger.debug(f"Precio actual de {symbol}: {price}")
-            return price
-        except (BinanceAPIException, BinanceRequestException) as e:
-            logger.error(f"Error al obtener precio actual: {str(e)}")
-            return None
+        max_retries = 3
+        retry_delay = 2  # segundos
+        
+        for attempt in range(max_retries):
+            try:
+                # Intentar obtener el precio usando get_symbol_ticker
+                ticker = self.client.get_symbol_ticker(symbol=symbol)
+                price = float(ticker['price'])
+                logger.debug(f"Precio actual de {symbol}: {price}")
+                return price
+            except (BinanceAPIException, BinanceRequestException) as e:
+                logger.warning(f"Intento {attempt+1}/{max_retries}: Error al obtener precio con get_symbol_ticker: {str(e)}")
+                
+                # Si falla, intentar con get_ticker (método alternativo)
+                try:
+                    ticker_data = self.client.get_ticker(symbol=symbol)
+                    if 'lastPrice' in ticker_data:
+                        price = float(ticker_data['lastPrice'])
+                        logger.debug(f"Precio actual de {symbol} (método alternativo): {price}")
+                        return price
+                except Exception as e2:
+                    logger.warning(f"Intento {attempt+1}/{max_retries}: Error al obtener precio con get_ticker: {str(e2)}")
+                
+                # Si aún falla, intentar con get_recent_trades
+                try:
+                    trades = self.client.get_recent_trades(symbol=symbol, limit=1)
+                    if trades and len(trades) > 0:
+                        price = float(trades[0]['price'])
+                        logger.debug(f"Precio actual de {symbol} (desde trades recientes): {price}")
+                        return price
+                except Exception as e3:
+                    logger.warning(f"Intento {attempt+1}/{max_retries}: Error al obtener precio desde trades recientes: {str(e3)}")
+                
+                # Esperar antes de reintentar
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+        
+        # Si todos los intentos fallan
+        logger.error(f"Error: No se pudo obtener el precio actual de {symbol} después de {max_retries} intentos")
+        return None
     
     def place_market_buy_order(self, symbol, quantity, test=True):
         """
