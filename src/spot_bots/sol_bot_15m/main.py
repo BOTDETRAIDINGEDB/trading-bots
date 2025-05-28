@@ -228,6 +228,20 @@ def run_trading_bot(args, logger):
             if current_price:
                 logger.info(f"Precio de {args.symbol} actualizado: {current_price} USDT")
                 
+                # Enviar notificación periódica a Telegram cada 15 minutos (900 segundos)
+                if telegram_connected:
+                    if not 'last_market_update' in locals() or (current_time - last_market_update).total_seconds() >= 900:  # 15 minutos
+                        # Crear un diccionario básico de condiciones de mercado para la notificación
+                        market_conditions = {
+                            'trend_strength': strategy.get_trend_strength() if hasattr(strategy, 'get_trend_strength') else 0,
+                            'volatility': strategy.get_volatility() if hasattr(strategy, 'get_volatility') else 0.5,
+                            'rsi': strategy.get_rsi() if hasattr(strategy, 'get_rsi') else 50,
+                            'volume_change': strategy.get_volume_change() if hasattr(strategy, 'get_volume_change') else 0
+                        }
+                        telegram.notify_market_update(market_conditions, current_price)
+                        last_market_update = current_time
+                        logger.info("Enviada notificación de actualización de mercado a Telegram")
+                
                 # Actualizar precio en la API
                 if api_connected:
                     api_client.update_bot_status(
