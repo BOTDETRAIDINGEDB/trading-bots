@@ -160,13 +160,14 @@ echo "Limpiando archivos redundantes..."
 # Comentado porque el script no existe en esta ubicación
 # python3 src/utils/cleanup_redundant_files.py --clean
 
-# Iniciar el bot en una sesión de screen
-echo "Iniciando bot en sesión screen '$BOT_NAME'..."
+# Iniciar los componentes del bot en sesiones de screen separadas
+echo "Iniciando componentes del bot SOL..."
 
 # Configurar PYTHONPATH para incluir los directorios necesarios
 PYTHONPATH="$BOT_DIR/src:$BOT_DIR:$HOME/new-trading-bots"
 
-# Iniciar el bot en una sesión screen con el PYTHONPATH configurado
+# 1. Iniciar el bot principal en una sesión screen
+echo "Iniciando bot principal en sesión screen '$BOT_NAME'..."
 screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 main.py \
     --use-ml \
     --retrain-interval $RETRAIN_INTERVAL \
@@ -178,10 +179,32 @@ screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 mai
     --status-interval $STATUS_INTERVAL \
     > \"$LOG_FILE\" 2>&1"
 
-echo "Bot iniciado en sesión screen '$BOT_NAME'"
-echo "Para ver los logs en tiempo real: screen -r $BOT_NAME"
-echo "Para desconectarse de la sesión sin detener el bot: Ctrl+A, D"
-echo "Para ver los logs guardados: tail -f $LOG_FILE"
+# 2. Iniciar el componente adaptativo en otra sesión screen
+ADAPTIVE_BOT_NAME="${BOT_NAME}_adaptive"
+ADAPTIVE_LOG_FILE="$BOT_DIR/logs/${BOT_NAME}_adaptive_$(date +%Y%m%d_%H%M%S).log"
+echo "Iniciando componente adaptativo en sesión screen '$ADAPTIVE_BOT_NAME'..."
+screen -dmS $ADAPTIVE_BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 adaptive_main.py \
+    --symbol $SYMBOL \
+    --interval $INTERVAL \
+    --lookback 90 \
+    --balance $SIMULATION_BALANCE \
+    --risk $RISK \
+    --simulation \
+    --use-ml \
+    --retrain-interval 1440 \
+    > \"$ADAPTIVE_LOG_FILE\" 2>&1"
+
+echo "=================================================================="
+echo "Bot SOL iniciado completamente con todos sus componentes:"
+echo "  • Bot principal: sesión screen '$BOT_NAME'"
+echo "    - Log: $LOG_FILE"
+echo "  • Componente adaptativo: sesión screen '$ADAPTIVE_BOT_NAME'"
+echo "    - Log: $ADAPTIVE_LOG_FILE"
+echo "=================================================================="
+echo "Para ver los logs en tiempo real:"
+echo "  • Bot principal: screen -r $BOT_NAME"
+echo "  • Componente adaptativo: screen -r $ADAPTIVE_BOT_NAME"
+echo "Para desconectarse de una sesión sin detener el bot: Ctrl+A, D"
 echo ""
 echo "Bot iniciado en modo simulación de aprendizaje en Google Cloud VM."
 echo "Usando datos de mercado reales con balance ficticio de $SIMULATION_BALANCE USDT."
