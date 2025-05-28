@@ -121,11 +121,18 @@ class TechnicalStrategy:
         
         # Si estamos usando ML y tenemos una predicción, combinar con la señal técnica
         if self.use_ml and ml_prediction is not None:
+            # Convertir ml_prediction a un valor simple si es un array
+            ml_pred_value = 1 if hasattr(ml_prediction, 'any') and ml_prediction.any() == 1 else 0
+            
+            # Solo para logging
+            if hasattr(ml_prediction, 'shape') and len(ml_prediction.shape) > 0:
+                logger.info(f"Predicción ML es un array de forma {ml_prediction.shape}, usando valor simplificado: {ml_pred_value}")
+            
             # Solo entrar si ambas señales coinciden o si la predicción ML es muy fuerte
-            if ml_prediction == 1 and (signal == 1 or signal == 0):
-                logger.info(f"Señal de entrada confirmada por ML: {ml_prediction}")
+            if ml_pred_value == 1 and (signal == 1 or signal == 0):
+                logger.info(f"Señal de entrada confirmada por ML: {ml_pred_value}")
                 return self._validate_trade_conditions(price, available_balance)
-            elif signal == 1 and ml_prediction == 0:
+            elif signal == 1 and ml_pred_value == 0:
                 # Si la señal técnica es fuerte pero ML es neutral, entrar con menor confianza
                 logger.info("Señal técnica positiva con ML neutral, procediendo con precaución")
                 return self._validate_trade_conditions(price, available_balance)
