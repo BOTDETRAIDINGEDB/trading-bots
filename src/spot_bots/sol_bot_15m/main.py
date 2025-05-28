@@ -438,7 +438,7 @@ def run_trading_bot(args, logger):
                     # Obtener la última señal
                     if not df.empty:
                         last_row = df.iloc[-1]
-                        signal = last_row['signal']
+                        trade_signal = last_row['signal']
                         
                         # Verificar si ya estamos en una posición
                         if strategy.position != 0:
@@ -488,7 +488,7 @@ def run_trading_bot(args, logger):
                             # Verificar si debemos entrar en una posición
                             available_balance = strategy.current_balance if args.simulation else binance_api.get_account_balance('USDT') or 0
                             
-                            if strategy.should_enter_trade(signal, current_price, available_balance, ml_prediction):
+                            if strategy.should_enter_trade(trade_signal, current_price, available_balance, ml_prediction):
                                 trade = strategy.enter_trade(current_price, current_time)
                                 if trade:
                                     # Notificar por Telegram
