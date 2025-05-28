@@ -10,6 +10,7 @@ import requests
 from datetime import datetime
 import time
 import json
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -56,44 +57,130 @@ class EnhancedTelegramNotifier:
             logger.error(f"Error al verificar conexión con Telegram: {str(e)}")
             return False
     
-    def send_trade_notification(self, trade_type, symbol, price, size, profit_loss=None):
-        """
-        Envía una notificación sobre una operación de trading.
-        Compatible con el código existente.
+    # Este método ha sido movido y mejorado más abajo en el archivo
+    # Ver la implementación completa de send_trade_notification
+    
+    def send_error_notification(self, error_message):
+        """Envía una notificación de error a Telegram.
         
         Args:
-            trade_type (str): Tipo de operación ('entry', 'exit', 'stop_loss', 'take_profit').
-            symbol (str): Par de trading.
-            price (float): Precio de la operación.
-            size (float): Tamaño de la posición.
-            profit_loss (float, optional): Ganancia o pérdida de la operación (solo para salidas).
+            error_message (str): Mensaje de error a enviar.
             
         Returns:
-            bool: True si la notificación se envió correctamente, False en caso contrario.
+            bool: True si se envió correctamente, False en caso contrario.
         """
-        # Crear un trade dict para usar con los métodos mejorados
-        trade = {
-            'type': 'long',  # Por defecto
-            'entry_price': price if trade_type == 'entry' else 0,
-            'exit_price': price if trade_type != 'entry' else 0,
-            'position_size': size,
-            'profit_loss': profit_loss,
-            'profit_loss_pct': (profit_loss / (price * size) * 100) if profit_loss is not None else 0,
-            'exit_reason': trade_type if trade_type != 'entry' else None,
-            'market_conditions': {}
-        }
+        try:
+            message = f"🚨 *ERROR EN EL BOT* 🚨\n\n{error_message}\n\n⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            return self.send_message(message)
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de error: {str(e)}")
+            # Intentar enviar un mensaje simplificado como último recurso
+            try:
+                simple_message = f"🚨 ERROR: {error_message[:50]}..."
+                return self.send_message(simple_message)
+            except:
+                logger.error("No se pudo enviar ni siquiera el mensaje de error simplificado")
+                return False
+    
+    def send_status_update(self, status_data):
+        """Envía una actualización de estado a Telegram.
         
-        # Usar los métodos mejorados según el tipo de operación
-        if trade_type == 'entry':
-            return self.notify_trade_entry(trade, price)
-        else:
-            # Crear métricas de rendimiento básicas para la notificación
-            performance_metrics = {
-                'win_rate': 0,
-                'profit_factor': 0,
-                'total_profit': profit_loss or 0
-            }
-            return self.notify_trade_exit(trade, 0, performance_metrics)
+        Args:
+            status_data (dict): Datos del estado actual del bot.
+            
+        Returns:
+            bool: True si se envió correctamente, False en caso contrario.
+        """
+        try:
+            # Construir mensaje de estado
+            message = f"📊 *ACTUALIZACIÓN DE ESTADO* 📊\n\n"
+            
+            # Añadir información básica
+            message += f"• 🤖 *Bot:* SOL Trading Bot\n"
+            message += f"• ⏰ *Timestamp:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            
+            # Añadir información del estado
+            if 'balance' in status_data:
+                message += f"💰 *Balance:* `{status_data['balance']} USDT`\n"
+            
+            if 'current_price' in status_data:
+                message += f"💲 *Precio actual:* `{status_data['current_price']} USDT`\n"
+            
+            if 'active_trades' in status_data:
+                message += f"🔄 *Operaciones activas:* `{status_data['active_trades']}`\n"
+            
+            if 'profit_today' in status_data:
+                profit = status_data['profit_today']
+                emoji = "🟢" if profit >= 0 else "🔴"
+                message += f"{emoji} *Beneficio hoy:* `{profit} USDT`\n"
+            
+            # Añadir información adicional si existe
+            for key, value in status_data.items():
+                if key not in ['balance', 'current_price', 'active_trades', 'profit_today']:
+                    message += f"• *{key}:* `{value}`\n"
+            
+            return self.send_message(message)
+        except Exception as e:
+            logger.error(f"Error al enviar actualización de estado: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False
+    
+    def send_trade_notification(self, trade_type=None, symbol=None, price=None, size=None, profit_loss=None, trade_data=None):
+        """
+        Envía una notificación sobre una operación de trading.
+        
+        Esta función acepta dos formas de llamada:
+        1. Con parámetros individuales (trade_type, symbol, price, size, profit_loss)
+        2. Con un diccionario trade_data que contiene toda la información
+        
+        Args:
+            trade_type (str, optional): Tipo de operación ('buy' o 'sell').
+            symbol (str, optional): Símbolo del par de trading.
+            price (float, optional): Precio de la operación.
+            size (float, optional): Tamaño de la operación.
+            profit_loss (float, optional): Beneficio o pérdida de la operación (solo para ventas).
+            trade_data (dict, optional): Diccionario con toda la información de la operación.
+            
+        Returns:
+            bool: True si se envió correctamente, False en caso contrario.
+        """
+        try:
+            # Si se proporciona trade_data, usamos la versión nueva
+            if trade_data is not None:
+                # Construir mensaje según el tipo de operación
+                if trade_data['type'] == 'buy':
+                    message = self._format_buy_message(trade_data)
+                elif trade_data['type'] == 'sell':
+                    message = self._format_sell_message(trade_data)
+                else:
+                    message = f"⚠️ Operación desconocida: {trade_data}"
+            else:
+                # Compatibilidad con la versión anterior
+                # Determinar emoji según el tipo de operación
+                emoji = "🟢" if trade_type.lower() == "buy" else "🔴"
+                operation = "Compra" if trade_type.lower() == "buy" else "Venta"
+                
+                # Construir mensaje básico
+                message = f"{emoji} *{operation} de {symbol}* {emoji}\n\n"
+                message += f"💰 *Precio:* `{price} USDT`\n"
+                message += f"📊 *Cantidad:* `{size} {symbol.replace('USDT', '')}`\n"
+                message += f"💵 *Total:* `{price * size:.2f} USDT`\n"
+                
+                # Añadir información de beneficio/pérdida si es una venta
+                if trade_type.lower() == "sell" and profit_loss is not None:
+                    pl_emoji = "🟢" if profit_loss >= 0 else "🔴"
+                    message += f"\n{pl_emoji} *P/L:* `{profit_loss:.2f} USDT`\n"
+                    message += f"{pl_emoji} *P/L %:* `{(profit_loss / (price * size)) * 100:.2f}%`\n"
+                
+                # Añadir timestamp
+                message += f"\n⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            # Enviar mensaje
+            return self.send_message(message)
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de operación: {str(e)}")
+            logger.error(traceback.format_exc())
+            return False
     
     def send_message(self, message, retry=3):
         """
