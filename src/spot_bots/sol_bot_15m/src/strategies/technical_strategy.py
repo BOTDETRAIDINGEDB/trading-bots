@@ -398,6 +398,27 @@ class TechnicalStrategy:
         """
         return self.performance_metrics
     
+    def should_retrain_model(self):
+        """
+        Determina si el modelo de ML debe ser reentrenado basado en el tiempo transcurrido
+        desde el último entrenamiento y la cantidad de datos nuevos disponibles.
+        
+        Returns:
+            bool: True si el modelo debe ser reentrenado, False en caso contrario.
+        """
+        # Si no hay tiempo de último entrenamiento, reentrenar
+        if not hasattr(self, 'last_train_time'):
+            return True
+            
+        # Verificar si ha pasado suficiente tiempo desde el último entrenamiento
+        time_since_last_train = (datetime.now() - self.last_train_time).total_seconds() / 60  # en minutos
+        
+        # Por defecto, reentrenar cada 60 minutos (1 hora)
+        retrain_interval = 60
+        
+        # Si hay suficientes datos nuevos o ha pasado suficiente tiempo, reentrenar
+        return time_since_last_train >= retrain_interval
+    
     def process_with_ml(self, df):
         """
         Procesa los datos con el modelo de ML.
