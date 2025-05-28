@@ -580,7 +580,67 @@ class AdaptiveBot:
             # Notificar actualización de mercado cada 15 minutos (1 vela de 15 min)
             current_time = datetime.now()
             if not hasattr(self, 'last_market_update') or (current_time - self.last_market_update).total_seconds() >= 900:  # 15 minutos
-                self.telegram.notify_market_update(self.strategy.market_conditions, current_price)
+                # Calcular condiciones de mercado
+                market_conditions = {
+                    'trend_strength': 0.0,  # Valor predeterminado
+                    'volatility': 0.0,     # Valor predeterminado
+                    'rsi': 50.0,           # Valor predeterminado
+                    'volume_change': 0.0   # Valor predeterminado
+                }
+                
+                # Calcular indicadores reales si tenemos datos
+                if df is not None and len(df) > 0:
+                    try:
+                        # Guardar el DataFrame en la estrategia para que los métodos puedan acceder a él
+                        self.strategy.df = df
+                        
+                        # Calcular tendencia basada en la diferencia porcentual entre el primer y último precio
+                        df_tail = df.tail(20)
+                        if len(df_tail) >= 5:  # Necesitamos al menos 5 velas para un cálculo significativo
+                            first_price = df_tail['close'].iloc[0]
+                            last_price = df_tail['close'].iloc[-1]
+                            
+                            if first_price > 0:
+                                # Calcular el cambio porcentual y normalizar a un rango de -1 a 1
+                                percent_change = (last_price - first_price) / first_price
+                                # Limitar a un rango de -1 a 1
+                                market_conditions['trend_strength'] = max(-1.0, min(1.0, percent_change * 5))
+                        
+                        # Calcular volatilidad
+                        if len(df_tail) >= 5:
+                            highest_high = df_tail['high'].max()
+                            lowest_low = df_tail['low'].min()
+                            
+                            if lowest_low > 0:
+                                # Calcular el rango porcentual
+                                range_percent = (highest_high - lowest_low) / lowest_low
+                                # Normalizar a un rango de 0 a 1
+                                market_conditions['volatility'] = min(1.0, range_percent)
+                        
+                        # Obtener RSI
+                        if 'rsi' in df.columns:
+                            last_rsi = df['rsi'].iloc[-1]
+                            if not pd.isna(last_rsi):
+                                market_conditions['rsi'] = float(last_rsi)
+                        
+                        # Calcular cambio de volumen
+                        if 'volume' in df.columns and len(df_tail) >= 5:
+                            avg_volume = df_tail['volume'].iloc[:-1].mean()
+                            last_volume = df_tail['volume'].iloc[-1]
+                            
+                            if avg_volume > 0:
+                                # Calcular el cambio porcentual
+                                volume_change = (last_volume - avg_volume) / avg_volume
+                                # Limitar a un rango de -1 a 1
+                                market_conditions['volume_change'] = max(-1.0, min(1.0, volume_change))
+                    except Exception as e:
+                        logger.error(f"Error al calcular condiciones de mercado: {str(e)}")
+                
+                # Guardar las condiciones de mercado en la estrategia para futuras referencias
+                self.strategy.market_conditions = market_conditions
+                
+                # Enviar notificación de actualización de mercado
+                self.telegram.notify_market_update(market_conditions, current_price)
                 self.last_market_update = current_time
             
             # Verificar si estamos en una posición
