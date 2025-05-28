@@ -230,20 +230,26 @@ class EnhancedTelegramNotifier:
         Returns:
             bool: True si se envió correctamente, False en caso contrario.
         """
-        message = f"""🤖 *BOT SOL ADAPTATIVO INICIADO* 🤖
+        try:
+            # Obtener precio fresco directamente de Binance
+            symbol = config['symbol']
+            fallback_price = config.get('current_price', 0)
+            fresh_price = self._get_fresh_price(symbol, fallback_price)
+            
+            message = f"""🤖 *BOT SOL ADAPTATIVO INICIADO* 🤖
 
 *⚙️ Configuración:*
 • 📊 Par: `{config['symbol']}`
-• ⏱️ Intervalo: `{config['interval']}`
+• ⏰️ Intervalo: `{config['interval']}`
 • 🛑 Stop Loss: `{config['stop_loss']*100}%` (fijo)
-• 🎯 Take Profit: Adaptativo
+• 🏁 Take Profit: Adaptativo
 • ⚠️ Riesgo inicial: `{config['risk']*100}%`
-• 🧪 Simulación: {'✅' if config['simulation'] else '❌'}
-• 🧠 ML activado: {'✅' if config['use_ml'] else '❌'}
+• 🧪 Simulación: {'\u2705' if config['simulation'] else '\u274c'}
+• 🧠 ML activado: {'\u2705' if config['use_ml'] else '\u274c'}
 
 💰 *Balance inicial:* `{config['balance']} USDT`
 
-📈 *Precio actual SOL:* `{self.format_price(config.get('current_price', 0))} USDT`
+📈 *Precio actual SOL:* `{self.format_price(fresh_price)} USDT`
 
 🔍 *Modo aprendizaje:* Activo (operaciones al 50% hasta alcanzar 55% win rate)
 
@@ -251,7 +257,21 @@ class EnhancedTelegramNotifier:
 
 _Bot esperando señales de entrada..._
 """
-        return self.send_message(message)
+            return self.send_message(message)
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de inicio: {str(e)}")
+            # Intentar enviar un mensaje simplificado en caso de error
+            try:
+                simple_message = f"""🤖 *BOT SOL ADAPTATIVO INICIADO* 🤖
+
+⏰ *Iniciado:* {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+_Bot esperando señales de entrada..._
+"""
+                return self.send_message(simple_message)
+            except:
+                pass
+            return False
     
     def _get_fresh_price(self, symbol, fallback_price):
         """
@@ -375,22 +395,48 @@ _Bot esperando señales de entrada..._
         Returns:
             str: Texto de predicción.
         """
-        trend = market_conditions.get('trend_strength', 0)
-        volatility = market_conditions.get('volatility', 0.5)
-        rsi = market_conditions.get('rsi', 50)
+        # Obtener valores con valores predeterminados seguros
+        trend = float(market_conditions.get('trend_strength', 0))
+        volatility = float(market_conditions.get('volatility', 0.5))
+        rsi = float(market_conditions.get('rsi', 50))
+        volume_change = float(market_conditions.get('volume_change', 0))
         
-        if trend > 0.3 and rsi < 70:
-            return "🟢 Probable continuación alcista"
-        elif trend < -0.3 and rsi > 30:
-            return "🔴 Probable continuación bajista"
-        elif trend > 0 and rsi > 70:
+        # Registrar los valores para depuración
+        logger.debug(f"Predicción con: trend={trend}, volatility={volatility}, rsi={rsi}, volume_change={volume_change}")
+        
+        # Lógica de predicción mejorada
+        if abs(trend) < 0.05:  # Tendencia muy lateral
+            if volatility > 0.4:
+                return "🟡 Posible ruptura de rango"
+            else:
+                return "⚪ Consolidación probable"
+        
+        if trend > 0.2:  # Tendencia alcista clara
+            if rsi > 75:
+                return "🟠 Sobrecompra, posible corrección"
+            elif volume_change > 0.2:
+                return "🟢 Continuación alcista con volumen"
+            else:
+                return "🟢 Probable continuación alcista"
+                
+        if trend < -0.2:  # Tendencia bajista clara
+            if rsi < 25:
+                return "🟠 Sobreventa, posible rebote"
+            elif volume_change > 0.2:
+                return "🔴 Continuación bajista con volumen"
+            else:
+                return "🔴 Probable continuación bajista"
+        
+        # Casos mixtos
+        if rsi > 70:
             return "🟠 Posible agotamiento alcista"
-        elif trend < 0 and rsi < 30:
+        elif rsi < 30:
             return "🟠 Posible rebote técnico"
-        elif volatility > 0.7:
+        elif volatility > 0.6:
             return "🟡 Alta volatilidad, movimiento fuerte probable"
-        else:
-            return "⚪ Consolidación probable"
+        
+        # Caso predeterminado
+        return "⚪ Consolidación probable"
     
     def notify_trade_entry(self, trade, current_price):
         """
