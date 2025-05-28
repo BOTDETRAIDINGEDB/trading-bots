@@ -166,13 +166,22 @@ echo "Iniciando componentes del bot SOL..."
 # Configurar PYTHONPATH para incluir los directorios necesarios
 PYTHONPATH="$BOT_DIR/src:$BOT_DIR:$HOME/new-trading-bots"
 
-# Detener sesiones existentes si existen para evitar duplicados
+# Detener TODAS las sesiones existentes para evitar duplicados
 echo "Verificando si existen sesiones previas..."
-if screen -list | grep -q "$BOT_NAME"; then
-    echo "Deteniendo sesión existente '$BOT_NAME'..."
-    screen -S $BOT_NAME -X quit
-    sleep 2  # Esperar a que la sesión se cierre completamente
+
+# Detener todas las sesiones del bot principal (incluso las que puedan tener nombres ligeramente diferentes)
+for session in $(screen -ls | grep -E "$BOT_NAME" | grep -v "_adaptive" | awk '{print $1}'); do
+    echo "Deteniendo sesión: $session"
+    screen -S $session -X quit
+done
+
+# Eliminar archivo de control para forzar el envío de notificaciones
+if [ -f "$BOT_DIR/.last_startup" ]; then
+    echo "Eliminando archivo de control .last_startup para forzar notificaciones"
+    rm -f "$BOT_DIR/.last_startup"
 fi
+
+sleep 3  # Esperar a que todas las sesiones se cierren completamente
 
 # 1. Iniciar el bot principal en una sesión screen
 echo "Iniciando bot principal en sesión screen '$BOT_NAME'..."
@@ -191,12 +200,14 @@ screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 mai
 ADAPTIVE_BOT_NAME="${BOT_NAME}_adaptive"
 ADAPTIVE_LOG_FILE="$BOT_DIR/logs/${BOT_NAME}_adaptive_$(date +%Y%m%d_%H%M%S).log"
 
-# Detener sesión adaptativa existente si existe
-if screen -list | grep -q "$ADAPTIVE_BOT_NAME"; then
-    echo "Deteniendo sesión existente '$ADAPTIVE_BOT_NAME'..."
-    screen -S $ADAPTIVE_BOT_NAME -X quit
-    sleep 2  # Esperar a que la sesión se cierre completamente
-fi
+# Detener TODAS las sesiones adaptativas existentes
+echo "Deteniendo todas las sesiones adaptativas existentes..."
+for session in $(screen -ls | grep -E "$BOT_NAME.*adaptive" | awk '{print $1}'); do
+    echo "Deteniendo sesión adaptativa: $session"
+    screen -S $session -X quit
+done
+
+sleep 3  # Esperar a que todas las sesiones se cierren completamente
 
 echo "Iniciando componente adaptativo en sesión screen '$ADAPTIVE_BOT_NAME'..."
 screen -dmS $ADAPTIVE_BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 adaptive_main.py \
