@@ -45,19 +45,46 @@ export CREDENTIALS_PATH="$CREDENTIALS_FILE"
 # Extraer y exportar las credenciales de Binance directamente
 if [ -f "$CREDENTIALS_FILE" ]; then
     echo "Extrayendo credenciales de Binance desde $CREDENTIALS_FILE"
-    # Extraer las credenciales usando jq si está disponible, o grep como alternativa
-    if command -v jq &> /dev/null; then
-        BINANCE_API_KEY=$(jq -r '.env.BINANCE_API_KEY' "$CREDENTIALS_FILE")
-        BINANCE_API_SECRET=$(jq -r '.env.BINANCE_API_SECRET' "$CREDENTIALS_FILE")
-    else
-        BINANCE_API_KEY=$(grep -o '"BINANCE_API_KEY"[^,]*' "$CREDENTIALS_FILE" | cut -d '"' -f 4)
-        BINANCE_API_SECRET=$(grep -o '"BINANCE_API_SECRET"[^,]*' "$CREDENTIALS_FILE" | cut -d '"' -f 4)
+    
+    # Mostrar las primeras líneas del archivo para depuración (sin mostrar valores sensibles)
+    echo "Estructura del archivo credentials.json:"
+    head -n 20 "$CREDENTIALS_FILE" | grep -v "KEY\|SECRET\|PASSWORD" | sed 's/".*":.*"/"VALOR_SENSIBLE"/g'
+    
+    # Verificar si el archivo tiene una estructura JSON válida
+    if ! cat "$CREDENTIALS_FILE" | python3 -m json.tool &>/dev/null; then
+        echo "ADVERTENCIA: El archivo credentials.json no tiene un formato JSON válido"
     fi
     
-    # Exportar las variables de entorno
-    export BINANCE_API_KEY="$BINANCE_API_KEY"
-    export BINANCE_API_SECRET="$BINANCE_API_SECRET"
-    echo "Credenciales de Binance configuradas correctamente"
+    # Intentar diferentes métodos para extraer las credenciales
+    echo "Intentando diferentes métodos para extraer credenciales..."
+    
+    # Método 1: Usar Python para extraer las credenciales
+    echo "Método 1: Usando Python"
+    PYTHON_EXTRACT=$(python3 -c "import json; data = json.load(open('$CREDENTIALS_FILE')); print(data.get('env', {}).get('BINANCE_API_KEY', '')); print(data.get('env', {}).get('BINANCE_API_SECRET', ''))" 2>/dev/null)
+    BINANCE_API_KEY=$(echo "$PYTHON_EXTRACT" | head -n 1)
+    BINANCE_API_SECRET=$(echo "$PYTHON_EXTRACT" | tail -n 1)
+    
+    # Si el método 1 falla, intentar método 2
+    if [ -z "$BINANCE_API_KEY" ] || [ -z "$BINANCE_API_SECRET" ]; then
+        echo "Método 2: Usando grep"
+        BINANCE_API_KEY=$(grep -o '"BINANCE_API_KEY"[^,]*' "$CREDENTIALS_FILE" | grep -o '"[^"]*"' | tail -n 1 | tr -d '"')
+        BINANCE_API_SECRET=$(grep -o '"BINANCE_API_SECRET"[^,]*' "$CREDENTIALS_FILE" | grep -o '"[^"]*"' | tail -n 1 | tr -d '"')
+    fi
+    
+    # Verificar si se obtuvieron las credenciales
+    if [ -n "$BINANCE_API_KEY" ] && [ -n "$BINANCE_API_SECRET" ]; then
+        # Exportar las variables de entorno
+        export BINANCE_API_KEY="$BINANCE_API_KEY"
+        export BINANCE_API_SECRET="$BINANCE_API_SECRET"
+        echo "Credenciales de Binance configuradas correctamente"
+        echo "BINANCE_API_KEY configurada: ${BINANCE_API_KEY:0:3}...${BINANCE_API_KEY: -3}"
+        echo "BINANCE_API_SECRET configurada: ${BINANCE_API_SECRET:0:3}...${BINANCE_API_SECRET: -3}"
+    else
+        echo "ERROR: No se pudieron extraer las credenciales de Binance"
+        echo "Por favor, verifica que el archivo credentials.json contiene las claves BINANCE_API_KEY y BINANCE_API_SECRET"
+    fi
+else
+    echo "ERROR: No se encontró el archivo credentials.json en $CREDENTIALS_FILE"
 fi
 
 echo "==================================================================="
