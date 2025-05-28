@@ -230,17 +230,74 @@ def run_trading_bot(args, logger):
                 
                 # Enviar notificación periódica a Telegram cada 15 minutos (900 segundos)
                 if telegram_connected:
-                    if not 'last_market_update' in locals() or (current_time - last_market_update).total_seconds() >= 900:  # 15 minutos
-                        # Crear un diccionario básico de condiciones de mercado para la notificación
-                        market_conditions = {
-                            'trend_strength': strategy.get_trend_strength() if hasattr(strategy, 'get_trend_strength') else 0,
-                            'volatility': strategy.get_volatility() if hasattr(strategy, 'get_volatility') else 0.5,
-                            'rsi': strategy.get_rsi() if hasattr(strategy, 'get_rsi') else 50,
-                            'volume_change': strategy.get_volume_change() if hasattr(strategy, 'get_volume_change') else 0
-                        }
-                        telegram.notify_market_update(market_conditions, current_price)
+                    # Inicializar last_market_update si no existe
+                    if not 'last_market_update' in locals():
+                        # Establecer tiempo inicial para evitar notificación inmediata después del inicio
+                        last_market_update = current_time - timedelta(minutes=10)  # Enviar primera notificación después de 5 minutos
+                        
+                    # Verificar si ha pasado suficiente tiempo para enviar una nueva notificación
+                    if (current_time - last_market_update).total_seconds() >= 900:  # 15 minutos
+                        # Obtener precio actualizado justo antes de enviar la notificación
+                        fresh_price = binance_api.get_current_price(args.symbol)
+                        if not fresh_price:
+                            fresh_price = current_price  # Usar el precio actual si no se puede obtener uno nuevo
+                        
+                        # Crear un diccionario de condiciones de mercado para la notificación
+                        # Intentar obtener valores reales de los indicadores si están disponibles
+                        market_conditions = {}
+                        
+                        # Obtener tendencia del mercado
+                        if hasattr(strategy, 'get_trend_strength') and callable(getattr(strategy, 'get_trend_strength')):
+                            market_conditions['trend_strength'] = strategy.get_trend_strength()
+                        else:
+                            # Calcular tendencia básica basada en las últimas velas si hay datos disponibles
+                            if 'df' in locals() and not df.empty and len(df) > 20:
+                                closes = df['close'].tail(20).values
+                                if len(closes) > 1:
+                                    trend = (closes[-1] - closes[0]) / closes[0]
+                                    market_conditions['trend_strength'] = trend
+                                else:
+                                    market_conditions['trend_strength'] = 0
+                            else:
+                                market_conditions['trend_strength'] = 0
+                        
+                        # Obtener volatilidad del mercado
+                        if hasattr(strategy, 'get_volatility') and callable(getattr(strategy, 'get_volatility')):
+                            market_conditions['volatility'] = strategy.get_volatility()
+                        else:
+                            # Calcular volatilidad básica si hay datos disponibles
+                            if 'df' in locals() and not df.empty and len(df) > 20:
+                                closes = df['close'].tail(20).values
+                                if len(closes) > 1:
+                                    volatility = df['high'].tail(20).max() / df['low'].tail(20).min() - 1
+                                    market_conditions['volatility'] = min(1.0, max(0.0, volatility))
+                                else:
+                                    market_conditions['volatility'] = 0.5
+                            else:
+                                market_conditions['volatility'] = 0.5
+                        
+                        # Obtener RSI
+                        if 'df' in locals() and not df.empty and 'rsi' in df.columns:
+                            market_conditions['rsi'] = float(df['rsi'].iloc[-1])
+                        else:
+                            market_conditions['rsi'] = 50.0
+                        
+                        # Obtener cambio de volumen
+                        if 'df' in locals() and not df.empty and 'volume' in df.columns and len(df) > 20:
+                            avg_vol = df['volume'].tail(20).mean()
+                            last_vol = df['volume'].iloc[-1]
+                            if avg_vol > 0:
+                                vol_change = (last_vol - avg_vol) / avg_vol
+                                market_conditions['volume_change'] = max(-1.0, min(1.0, vol_change))
+                            else:
+                                market_conditions['volume_change'] = 0.0
+                        else:
+                            market_conditions['volume_change'] = 0.0
+                        
+                        # Enviar la notificación con datos actualizados
+                        telegram.notify_market_update(market_conditions, fresh_price)
                         last_market_update = current_time
-                        logger.info("Enviada notificación de actualización de mercado a Telegram")
+                        logger.info(f"Enviada notificación de actualización de mercado a Telegram con precio {fresh_price} USDT")
                 
                 # Actualizar precio en la API
                 if api_connected:
