@@ -82,15 +82,27 @@ class EnhancedTelegramNotifier:
                 logger.error("No se pudo enviar ni siquiera el mensaje de error simplificado")
                 return False
     
-    def send_status_update(self, status_data):
+    def send_status_update(self, balance, performance_metrics, symbol):
         """Envía una actualización de estado a Telegram.
         
         Args:
-            status_data (dict): Datos del estado actual del bot.
+            balance (float): Balance actual del bot.
+            performance_metrics (dict): Métricas de rendimiento del bot.
+            symbol (str): Símbolo del par de trading.
             
         Returns:
             bool: True si se envió correctamente, False en caso contrario.
         """
+        # Crear un objeto status_data compatible con el código existente
+        status_data = {
+            'balance': balance,
+            'symbol': symbol
+        }
+        
+        # Agregar las métricas de rendimiento al status_data
+        if performance_metrics and isinstance(performance_metrics, dict):
+            for key, value in performance_metrics.items():
+                status_data[key] = value
         try:
             # Construir mensaje de estado
             message = f"📊 *ACTUALIZACIÓN DE ESTADO* 📊\n\n"
