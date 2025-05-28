@@ -17,7 +17,7 @@ if src_dir not in sys.path:
 
 # Importar módulos del bot
 from utils.binance_client import BinanceAPI
-from utils.telegram_notifier import TelegramNotifier
+from utils.enhanced_telegram_notifier import EnhancedTelegramNotifier
 from utils.api_client import APIClient
 from data.processor import DataProcessor
 from strategies.technical_strategy import TechnicalStrategy
@@ -76,7 +76,7 @@ def run_trading_bot(args, logger):
     """Ejecuta el bot de trading."""
     # Inicializar componentes
     binance_api = BinanceAPI()
-    telegram = TelegramNotifier()
+    telegram = EnhancedTelegramNotifier()
     api_client = APIClient()
     data_processor = DataProcessor()
     strategy = TechnicalStrategy(

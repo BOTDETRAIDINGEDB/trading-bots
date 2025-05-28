@@ -32,6 +32,69 @@ class EnhancedTelegramNotifier:
         else:
             logger.info("Notificador de Telegram inicializado")
     
+    def verify_connection(self):
+        """
+        Verifica la conexión con la API de Telegram.
+        
+        Returns:
+            bool: True si la conexión es exitosa, False en caso contrario.
+        """
+        if not self.token or not self.chat_id:
+            logger.warning("Notificador de Telegram no está habilitado: faltan credenciales")
+            return False
+        
+        try:
+            url = f"https://api.telegram.org/bot{self.token}/getMe"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                logger.info("Conexión con Telegram verificada exitosamente")
+                return True
+            else:
+                logger.error(f"Error al verificar conexión con Telegram: {response.status_code} - {response.text}")
+                return False
+        except Exception as e:
+            logger.error(f"Error al verificar conexión con Telegram: {str(e)}")
+            return False
+    
+    def send_trade_notification(self, trade_type, symbol, price, size, profit_loss=None):
+        """
+        Envía una notificación sobre una operación de trading.
+        Compatible con el código existente.
+        
+        Args:
+            trade_type (str): Tipo de operación ('entry', 'exit', 'stop_loss', 'take_profit').
+            symbol (str): Par de trading.
+            price (float): Precio de la operación.
+            size (float): Tamaño de la posición.
+            profit_loss (float, optional): Ganancia o pérdida de la operación (solo para salidas).
+            
+        Returns:
+            bool: True si la notificación se envió correctamente, False en caso contrario.
+        """
+        # Crear un trade dict para usar con los métodos mejorados
+        trade = {
+            'type': 'long',  # Por defecto
+            'entry_price': price if trade_type == 'entry' else 0,
+            'exit_price': price if trade_type != 'entry' else 0,
+            'position_size': size,
+            'profit_loss': profit_loss,
+            'profit_loss_pct': (profit_loss / (price * size) * 100) if profit_loss is not None else 0,
+            'exit_reason': trade_type if trade_type != 'entry' else None,
+            'market_conditions': {}
+        }
+        
+        # Usar los métodos mejorados según el tipo de operación
+        if trade_type == 'entry':
+            return self.notify_trade_entry(trade, price)
+        else:
+            # Crear métricas de rendimiento básicas para la notificación
+            performance_metrics = {
+                'win_rate': 0,
+                'profit_factor': 0,
+                'total_profit': profit_loss or 0
+            }
+            return self.notify_trade_exit(trade, 0, performance_metrics)
+    
     def send_message(self, message, retry=3):
         """
         Envía un mensaje a Telegram.

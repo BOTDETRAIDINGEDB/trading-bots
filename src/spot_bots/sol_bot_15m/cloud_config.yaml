@@ -1,0 +1,92 @@
+# Configuración para despliegue en Google Cloud
+# Este archivo define los recursos y configuraciones para el bot SOL con aprendizaje profundo
+
+runtime: python39
+service: sol-bot-deep-learning
+
+env_variables:
+  # Variables de entorno para el bot
+  BOT_ENV: "production"
+  CLOUD_ENV: "true"
+  TF_DETERMINISTIC: "true"
+  LOG_LEVEL: "INFO"
+  
+  # Configuración de almacenamiento
+  STORAGE_BUCKET: "sol-bot-data"
+  MODELS_DIR: "/tmp/models"
+  DATA_DIR: "/tmp/data"
+  
+  # Configuración de TensorFlow
+  TF_CPP_MIN_LOG_LEVEL: "2"  # Suprimir mensajes de advertencia de TensorFlow
+  
+  # Configuración de memoria
+  MEMORY_LIMIT_MB: "2048"
+  
+  # No incluir credenciales sensibles aquí - usar Secret Manager
+
+handlers:
+- url: /.*
+  script: auto
+  secure: always
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 2
+  min_idle_instances: 1
+  max_idle_instances: 1
+  min_pending_latency: 30ms
+  max_pending_latency: 100ms
+  target_cpu_utilization: 0.7
+  target_throughput_utilization: 0.7
+  max_concurrent_requests: 10
+
+resources:
+  cpu: 2
+  memory_gb: 4
+  disk_size_gb: 10
+
+vpc_access_connector:
+  name: projects/PROJECT_ID/locations/REGION/connectors/sol-bot-connector
+
+# Configuración de secretos (reemplazar PROJECT_ID)
+secrets:
+- name: exchange-api-key
+  version: latest
+  mount_path: /secrets/exchange-api-key
+- name: exchange-api-secret
+  version: latest
+  mount_path: /secrets/exchange-api-secret
+- name: telegram-token
+  version: latest
+  mount_path: /secrets/telegram-token
+- name: telegram-chat-id
+  version: latest
+  mount_path: /secrets/telegram-chat-id
+
+# Configuración de entorno de ejecución
+entrypoint: gunicorn -b :$PORT --workers 2 --threads 8 --timeout 60 main:app
+
+# Configuración de logs
+logging:
+  driver: gcplogs
+  options:
+    gcp-project: PROJECT_ID
+    labels: "service=sol-bot-deep-learning"
+
+# Configuración de Cloud Storage para persistencia de datos
+volumes:
+- name: data-volume
+  volume_type: tmpfs
+  size_gb: 2
+- name: models-volume
+  volume_type: tmpfs
+  size_gb: 2
+
+# Script de inicio para configuración inicial
+lifecycle:
+  postStart:
+    exec:
+      command: ["bash", "-c", "mkdir -p /tmp/data /tmp/models && gsutil -m cp -r gs://sol-bot-data/* /tmp/ || true"]
+  preStop:
+    exec:
+      command: ["bash", "-c", "gsutil -m cp -r /tmp/models/* gs://sol-bot-data/models/ && gsutil -m cp -r /tmp/data/* gs://sol-bot-data/data/"]

@@ -1,0 +1,91 @@
+{
+    "price_features": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+    ],
+    "technical_indicators": [
+        {
+            "name": "rsi",
+            "params": {"window": 14}
+        },
+        {
+            "name": "macd",
+            "params": {"fast": 12, "slow": 26, "signal": 9}
+        },
+        {
+            "name": "bollinger_bands",
+            "params": {"window": 20, "std": 2}
+        },
+        {
+            "name": "atr",
+            "params": {"window": 14}
+        },
+        {
+            "name": "ema",
+            "params": {"window": 9}
+        },
+        {
+            "name": "ema",
+            "params": {"window": 21}
+        },
+        {
+            "name": "ema",
+            "params": {"window": 50}
+        },
+        {
+            "name": "stoch",
+            "params": {"k": 14, "d": 3, "smooth_k": 3}
+        },
+        {
+            "name": "adx",
+            "params": {"window": 14}
+        },
+        {
+            "name": "obv",
+            "params": {}
+        }
+    ],
+    "timeframe_features": [
+        "5m",
+        "15m",
+        "1h",
+        "4h"
+    ],
+    "derived_features": [
+        {
+            "name": "price_change",
+            "params": {"periods": [1, 3, 5, 10]}
+        },
+        {
+            "name": "volatility",
+            "params": {"window": 20}
+        },
+        {
+            "name": "volume_change",
+            "params": {"periods": [1, 3, 5]}
+        },
+        {
+            "name": "price_momentum",
+            "params": {"window": 10}
+        }
+    ],
+    "target_config": {
+        "type": "classification",
+        "classes": 3,
+        "thresholds": {
+            "bullish": 0.005,
+            "bearish": -0.005
+        },
+        "horizon": 3
+    },
+    "normalization": {
+        "method": "standard",
+        "params": {
+            "with_mean": true,
+            "with_std": true
+        }
+    }
+}
