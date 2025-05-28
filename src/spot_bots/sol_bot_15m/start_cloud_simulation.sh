@@ -31,11 +31,16 @@ export TF_NUM_INTRAOP_THREADS=2
 export TF_ENABLE_AUTO_MIXED_PRECISION=1
 
 # Verificar que las credenciales estén disponibles
-if [ ! -f "/home/edisonbautistaruiz2025/trading-bots-api/credentials.json" ]; then
+CREDENTIALS_FILE="$HOME/trading-bots-api/credentials.json"
+if [ ! -f "$CREDENTIALS_FILE" ]; then
     echo "ERROR: No se encontró el archivo de credenciales"
-    echo "Asegúrate de que exista: /home/edisonbautistaruiz2025/trading-bots-api/credentials.json"
+    echo "Asegúrate de que exista: $CREDENTIALS_FILE"
+    echo "Puedes copiarlo desde la API con: cp ~/trading-bots-api/credentials.json $CREDENTIALS_FILE"
     exit 1
 fi
+
+# Exportar la ruta de credenciales como variable de entorno para que el bot la use
+export CREDENTIALS_PATH="$CREDENTIALS_FILE"
 
 echo "==================================================================="
 echo "  INICIANDO BOT SOL EN MODO SIMULACIÓN DE APRENDIZAJE"
