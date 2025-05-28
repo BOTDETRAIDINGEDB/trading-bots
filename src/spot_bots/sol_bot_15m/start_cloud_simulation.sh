@@ -79,7 +79,11 @@ echo "Limpiando archivos redundantes..."
 
 # Iniciar el bot en una sesión de screen
 echo "Iniciando bot en sesión screen '$BOT_NAME'..."
-screen -dmS $BOT_NAME bash -c "python3 main.py \
+
+# Añadir el directorio src al PYTHONPATH para resolver problemas de importación
+PROJECT_ROOT="/home/edisonbautistaruiz2025/new-trading-bots"
+
+screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PROJECT_ROOT python3 main.py \
     --use-ml \
     --retrain-interval $RETRAIN_INTERVAL \
     --interval $INTERVAL \
