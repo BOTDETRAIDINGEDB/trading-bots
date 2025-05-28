@@ -253,6 +253,47 @@ _Bot esperando señales de entrada..._
 """
         return self.send_message(message)
     
+    def _get_fresh_price(self, symbol, fallback_price):
+        """
+        Obtiene el precio más actualizado directamente de Binance.
+        
+        Args:
+            symbol (str): Símbolo a consultar (ej. 'SOLUSDT').
+            fallback_price (float): Precio de respaldo si no se puede obtener el actual.
+            
+        Returns:
+            float: Precio actualizado o el precio de respaldo si hay error.
+        """
+        try:
+            # Intentar obtener el precio directamente de la API pública de Binance
+            url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'price' in data:
+                    fresh_price = float(data['price'])
+                    logger.info(f"Precio fresco obtenido de Binance API: {fresh_price}")
+                    return fresh_price
+            
+            # Si falla, intentar con otro endpoint
+            url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'lastPrice' in data:
+                    fresh_price = float(data['lastPrice'])
+                    logger.info(f"Precio fresco obtenido de Binance 24hr API: {fresh_price}")
+                    return fresh_price
+                    
+            # Si todo falla, usar el precio de respaldo
+            logger.warning(f"No se pudo obtener precio fresco, usando precio de respaldo: {fallback_price}")
+            return fallback_price
+        except Exception as e:
+            logger.warning(f"Error al obtener precio fresco de Binance: {str(e)}")
+            return fallback_price
+    
     def notify_market_update(self, market_conditions, current_price):
         """
         Notifica actualización de condiciones del mercado.
@@ -264,35 +305,39 @@ _Bot esperando señales de entrada..._
         Returns:
             bool: True si se envió correctamente, False en caso contrario.
         """
-        # Obtener emojis
-        emojis = self.get_market_emoji(market_conditions)
-        
-        # Formatear tendencia
-        trend = market_conditions.get('trend_strength', 0)
-        if trend > 0.5:
-            trend_text = "Fuertemente alcista"
-        elif trend > 0.1:
-            trend_text = "Alcista"
-        elif trend < -0.5:
-            trend_text = "Fuertemente bajista"
-        elif trend < -0.1:
-            trend_text = "Bajista"
-        else:
-            trend_text = "Lateral"
-        
-        # Formatear RSI
-        rsi = market_conditions.get('rsi', 50)
-        if rsi > 70:
-            rsi_text = "Sobrecomprado"
-        elif rsi < 30:
-            rsi_text = "Sobrevendido"
-        else:
-            rsi_text = "Neutral"
-        
-        message = f"""📊 *ACTUALIZACIÓN DE MERCADO - SOL* 📊
+        try:
+            # Obtener precio fresco directamente de Binance
+            fresh_price = self._get_fresh_price('SOLUSDT', current_price)
+            
+            # Obtener emojis
+            emojis = self.get_market_emoji(market_conditions)
+            
+            # Formatear tendencia
+            trend = market_conditions.get('trend_strength', 0)
+            if trend > 0.5:
+                trend_text = "Fuertemente alcista"
+            elif trend > 0.1:
+                trend_text = "Alcista"
+            elif trend < -0.5:
+                trend_text = "Fuertemente bajista"
+            elif trend < -0.1:
+                trend_text = "Bajista"
+            else:
+                trend_text = "Lateral"
+            
+            # Formatear RSI
+            rsi = market_conditions.get('rsi', 50)
+            if rsi > 70:
+                rsi_text = "Sobrecomprado"
+            elif rsi < 30:
+                rsi_text = "Sobrevendido"
+            else:
+                rsi_text = "Neutral"
+            
+            message = f"""📊 *ACTUALIZACIÓN DE MERCADO - SOL* 📊
 
-💵 *Precio actual de SOL:* `{self.format_price(current_price)} USDT`
-1 SOL = {self.format_price(current_price)} USDT
+💵 *Precio actual de SOL:* `{self.format_price(fresh_price)} USDT`
+1 SOL = {self.format_price(fresh_price)} USDT
 
 *Condiciones del mercado:*
 • {emojis['trend']} *Tendencia:* {trend_text} (`{trend:.2f}`)
@@ -303,9 +348,22 @@ _Bot esperando señales de entrada..._
 *Predicción próximas velas:*
 {self._get_prediction_text(market_conditions)}
 
-⏰ *Actualizado:* {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-"""
-        return self.send_message(message)
+⏰ *Actualizado:* {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
+            
+            return self.send_message(message)
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de mercado: {str(e)}")
+            # Intentar enviar un mensaje simplificado en caso de error
+            try:
+                simple_message = f"""📊 *ACTUALIZACIÓN DE MERCADO - SOL* 📊
+
+💵 *Precio actual de SOL:* `{self.format_price(current_price)} USDT`
+
+⏰ *Actualizado:* {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"""
+                return self.send_message(simple_message)
+            except:
+                pass
+            return False
     
     def _get_prediction_text(self, market_conditions):
         """

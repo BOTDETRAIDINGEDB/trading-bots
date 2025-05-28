@@ -72,8 +72,22 @@ def get_interval_seconds(interval):
     value = int(interval[:-1])
     return value * interval_map.get(unit, 3600)
 
+# Capturar señales de terminación para una salida limpia
+import signal
+import sys
+
+def signal_handler(sig, frame):
+    logger = logging.getLogger()
+    logger.info("Señal de terminación recibida. Cerrando bot de manera ordenada...")
+    # No enviamos mensaje de detención aquí, ya que esto podría ser parte de un reinicio
+    sys.exit(0)
+
 def run_trading_bot(args, logger):
     """Ejecuta el bot de trading."""
+    # Configurar manejadores de señales para salida limpia
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     # Inicializar componentes
     binance_api = BinanceAPI()
     telegram = EnhancedTelegramNotifier()
@@ -94,7 +108,29 @@ def run_trading_bot(args, logger):
     # Verificar conexión con Telegram
     telegram_connected = telegram.verify_connection()
     if telegram_connected:
-        telegram.send_message(f"🤖 *Bot de Trading SOL {args.interval} Iniciado* 🤖\nEl bot está {('en modo simulación' if args.simulation else 'en modo real')}.")
+        # Verificar si ya hay un mensaje de inicio reciente (últimos 60 segundos) para evitar duplicados
+        startup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.last_startup')
+        send_startup_message = True
+        
+        if os.path.exists(startup_file):
+            try:
+                with open(startup_file, 'r') as f:
+                    last_startup = float(f.read().strip())
+                    if time.time() - last_startup < 60:  # Si el último inicio fue hace menos de 60 segundos
+                        send_startup_message = False
+                        logger.info("Omitiendo mensaje de inicio para evitar duplicados")
+            except:
+                pass
+        
+        if send_startup_message:
+            telegram.send_message(f"🤖 *Bot de Trading SOL {args.interval} Iniciado* 🤖\nEl bot está {('en modo simulación' if args.simulation else 'en modo real')}.")
+            # Guardar timestamp del inicio
+            try:
+                with open(startup_file, 'w') as f:
+                    f.write(str(time.time()))
+            except Exception as e:
+                logger.warning(f"No se pudo guardar timestamp de inicio: {str(e)}")
+
     
     # Verificar conexión con la API y registrar el bot
     api_connected = api_client.verify_connection()
