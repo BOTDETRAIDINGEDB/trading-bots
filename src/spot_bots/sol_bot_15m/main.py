@@ -237,6 +237,31 @@ def run_trading_bot(args, logger):
                         
                     # Verificar si ha pasado suficiente tiempo para enviar una nueva notificación
                     if (current_time - last_market_update).total_seconds() >= 900:  # 15 minutos
+                        # Asegurarse de que tenemos datos procesados antes de enviar notificaciones
+                        if not hasattr(strategy, 'df') or strategy.df is None or strategy.df.empty:
+                            # Obtener datos históricos para procesar
+                            logger.info("Obteniendo datos históricos para calcular indicadores de mercado...")
+                            end_time = int(current_time.timestamp() * 1000)
+                            start_time = int((current_time - timedelta(days=5)).timestamp() * 1000)
+                            
+                            klines = binance_api.get_historical_klines(
+                                symbol=args.symbol,
+                                interval=args.interval,
+                                start_time=start_time,
+                                end_time=end_time,
+                                limit=500
+                            )
+                            
+                            if klines:
+                                # Procesar datos
+                                df = data_processor.klines_to_dataframe(klines)
+                                df = data_processor.calculate_indicators(df)
+                                df = data_processor.generate_signals(df)
+                                
+                                # Guardar el DataFrame en la estrategia
+                                strategy.df = df
+                                logger.info(f"Datos procesados para indicadores de mercado: {len(df)} filas")
+                        
                         # Obtener precio actualizado justo antes de enviar la notificación
                         fresh_price = binance_api.get_current_price(args.symbol)
                         if not fresh_price:
