@@ -134,10 +134,37 @@ class AdaptiveBot:
     
     def notify_bot_start(self):
         """Notifica el inicio del bot por Telegram."""
+        logger.info("Preparando notificación de inicio del bot adaptativo...")
+        
         try:
-            # Obtener precio actual
-            df = self.get_historical_data()
-            current_price = df['close'].iloc[-1] if df is not None else 0
+            # Obtener precio actual directamente de Binance para mayor precisión
+            try:
+                # Intentar obtener el precio directamente de la API pública de Binance
+                import requests
+                url = f"https://api.binance.com/api/v3/ticker/price?symbol={self.symbol}"
+                response = requests.get(url, timeout=5)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'price' in data:
+                        current_price = float(data['price'])
+                        logger.info(f"Precio fresco obtenido de Binance API: {current_price}")
+                    else:
+                        # Obtener precio de datos históricos como respaldo
+                        df = self.get_historical_data()
+                        current_price = df['close'].iloc[-1] if df is not None and not df.empty else 0
+                        logger.info(f"Usando precio de datos históricos: {current_price}")
+                else:
+                    # Obtener precio de datos históricos como respaldo
+                    df = self.get_historical_data()
+                    current_price = df['close'].iloc[-1] if df is not None and not df.empty else 0
+                    logger.info(f"Usando precio de datos históricos: {current_price}")
+            except Exception as e:
+                logger.warning(f"Error al obtener precio fresco: {str(e)}")
+                # Obtener precio de datos históricos como respaldo
+                df = self.get_historical_data()
+                current_price = df['close'].iloc[-1] if df is not None and not df.empty else 0
+                logger.info(f"Usando precio de datos históricos: {current_price}")
             
             config = {
                 'symbol': self.symbol,
@@ -151,22 +178,45 @@ class AdaptiveBot:
             }
             
             # Intentar enviar la notificación con reintentos
-            success = self.telegram.notify_bot_start(config)
-            if success:
-                logger.info("Notificación de inicio enviada correctamente")
-            else:
-                logger.warning("No se pudo enviar la notificación de inicio")
+            success = False
+            for attempt in range(3):  # Intentar hasta 3 veces
+                try:
+                    logger.info(f"Intento {attempt+1}/3: Enviando notificación de inicio...")
+                    success = self.telegram.notify_bot_start(config)
+                    if success:
+                        logger.info("Notificación de inicio enviada correctamente")
+                        break
+                    else:
+                        logger.warning(f"Intento {attempt+1}/3: Fallo al enviar notificación de inicio")
+                        time.sleep(2)  # Esperar antes de reintentar
+                except Exception as e:
+                    logger.error(f"Intento {attempt+1}/3: Error al enviar notificación de inicio: {str(e)}")
+                    time.sleep(2)  # Esperar antes de reintentar
+            
+            if not success:
+                logger.error("No se pudo enviar la notificación de inicio después de múltiples intentos")
                 
                 # Intentar enviar un mensaje simple como alternativa
-                simple_message = f"\ud83e\udd16 BOT SOL INICIADO - Balance: {self.balance} USDT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                self.telegram.send_message(simple_message)
+                try:
+                    logger.info("Intentando enviar mensaje simple alternativo...")
+                    simple_message = f"🤖 BOT SOL ADAPTATIVO INICIADO - Balance: {self.balance} USDT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    self.telegram.send_message(simple_message)
+                    logger.info("Mensaje simple alternativo enviado correctamente")
+                except Exception as e:
+                    logger.error(f"Error al enviar mensaje simple alternativo: {str(e)}")
+                    
+                    # Último intento con mensaje mínimo
+                    try:
+                        logger.info("Intentando enviar mensaje mínimo...")
+                        self.telegram.send_message("🤖 BOT SOL ADAPTATIVO INICIADO")
+                        logger.info("Mensaje mínimo enviado correctamente")
+                    except Exception as e2:
+                        logger.error(f"Error al enviar mensaje mínimo: {str(e2)}")
         except Exception as e:
-            logger.error(f"Error al enviar notificación de inicio: {str(e)}")
-            # Último intento con mensaje mínimo
-            try:
-                self.telegram.send_message("\ud83e\udd16 BOT SOL INICIADO")
-            except:
-                pass
+            logger.error(f"Error general al enviar notificación de inicio: {str(e)}")
+            # Imprimir el traceback completo para mejor diagnóstico
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
     
     def load_state(self):
         """

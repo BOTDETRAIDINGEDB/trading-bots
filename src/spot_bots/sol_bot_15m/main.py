@@ -107,29 +107,52 @@ def run_trading_bot(args, logger):
     
     # Verificar conexión con Telegram
     telegram_connected = telegram.verify_connection()
+    logger.info(f"Conexión con Telegram: {'Exitosa' if telegram_connected else 'Fallida'}")
+    
     if telegram_connected:
-        # Verificar si ya hay un mensaje de inicio reciente (últimos 60 segundos) para evitar duplicados
-        startup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.last_startup')
-        send_startup_message = True
+        # FORZAR envío de mensaje de inicio (eliminamos la verificación de tiempo)
+        logger.info("Enviando mensaje de inicio a Telegram...")
         
+        # Eliminar archivo .last_startup si existe para forzar el envío
+        startup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.last_startup')
         if os.path.exists(startup_file):
             try:
-                with open(startup_file, 'r') as f:
-                    last_startup = float(f.read().strip())
-                    if time.time() - last_startup < 60:  # Si el último inicio fue hace menos de 60 segundos
-                        send_startup_message = False
-                        logger.info("Omitiendo mensaje de inicio para evitar duplicados")
-            except:
-                pass
+                os.remove(startup_file)
+                logger.info("Archivo .last_startup eliminado para forzar notificación")
+            except Exception as e:
+                logger.warning(f"No se pudo eliminar archivo .last_startup: {str(e)}")
         
-        if send_startup_message:
-            telegram.send_message(f"🤖 *Bot de Trading SOL {args.interval} Iniciado* 🤖\nEl bot está {('en modo simulación' if args.simulation else 'en modo real')}.")
-            # Guardar timestamp del inicio
+        # Enviar mensaje de inicio con reintentos
+        success = False
+        for attempt in range(3):  # Intentar hasta 3 veces
+            try:
+                success = telegram.send_message(f"🤖 *Bot de Trading SOL {args.interval} Iniciado* 🤖\nEl bot está {('en modo simulación' if args.simulation else 'en modo real')}.")
+                if success:
+                    logger.info("Mensaje de inicio enviado correctamente a Telegram")
+                    break
+                else:
+                    logger.warning(f"Intento {attempt+1}/3: No se pudo enviar mensaje de inicio")
+                    time.sleep(2)  # Esperar antes de reintentar
+            except Exception as e:
+                logger.error(f"Intento {attempt+1}/3: Error al enviar mensaje de inicio: {str(e)}")
+                time.sleep(2)  # Esperar antes de reintentar
+        
+        if not success:
+            logger.error("No se pudo enviar mensaje de inicio después de múltiples intentos")
+        
+        # Guardar timestamp del inicio solo si el envío fue exitoso
+        if success:
             try:
                 with open(startup_file, 'w') as f:
                     f.write(str(time.time()))
+                logger.info("Timestamp de inicio guardado correctamente")
             except Exception as e:
                 logger.warning(f"No se pudo guardar timestamp de inicio: {str(e)}")
+    else:
+        logger.error("No se pudo enviar mensaje de inicio: Telegram no está conectado")
+        logger.error("Verifica las credenciales de Telegram en el archivo credentials.json")
+        logger.error(f"TELEGRAM_BOT_TOKEN: {'Configurado' if os.getenv('TELEGRAM_BOT_TOKEN') else 'No configurado'}")
+        logger.error(f"TELEGRAM_CHAT_ID: {'Configurado' if os.getenv('TELEGRAM_CHAT_ID') else 'No configurado'}")
 
     
     # Verificar conexión con la API y registrar el bot
