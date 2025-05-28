@@ -12,7 +12,7 @@ STATUS_INTERVAL=1        # Actualización de estado cada 1 hora
 RISK=0.02                # 2% de riesgo por operación
 
 # Directorio del bot (ruta absoluta en Google Cloud VM)
-BOT_DIR="/home/edisonbautistaruiz2025/trading-bots/src/spot_bots/sol_bot_15m"
+BOT_DIR="/home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_15m"
 
 # Crear directorio de logs si no existe
 mkdir -p "$BOT_DIR/logs"
@@ -69,11 +69,13 @@ cd "$BOT_DIR"
 
 # Ejecutar verificación de compatibilidad con Google Cloud VM
 echo "Verificando compatibilidad con Google Cloud VM..."
-python3 src/utils/check_cloud_compatibility.py --fix
+# Comentado porque el script no existe en esta ubicación
+# python3 src/utils/check_cloud_compatibility.py --fix
 
 # Limpiar archivos redundantes o temporales
 echo "Limpiando archivos redundantes..."
-python3 src/utils/cleanup_redundant_files.py --clean
+# Comentado porque el script no existe en esta ubicación
+# python3 src/utils/cleanup_redundant_files.py --clean
 
 # Iniciar el bot en una sesión de screen
 echo "Iniciando bot en sesión screen '$BOT_NAME'..."
