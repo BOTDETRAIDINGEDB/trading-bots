@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class TechnicalStrategy:
     """Estrategia de trading basada en indicadores técnicos."""
     
-    def __init__(self, symbol, risk_per_trade=0.02, stop_loss_pct=0.02, take_profit_pct=0.04, max_trades=3, use_ml=True):
+    def __init__(self, symbol, risk_per_trade=0.03, stop_loss_pct=0.05, take_profit_pct=0.03, max_trades=3, use_ml=True):
         """
         Inicializa la estrategia de trading.
         
@@ -48,7 +48,7 @@ class TechnicalStrategy:
         self.take_profit = 0.0
         self.trailing_stop = 0.0
         self.trailing_active = False
-        self.trailing_percent = 0.015  # 1.5% de trailing stop
+        self.trailing_percent = 0.01  # 1% de trailing stop
         self.highest_price = 0.0  # Para tracking del trailing stop
         self.trades = []
         self.current_balance = 0.0
@@ -595,17 +595,26 @@ class TechnicalStrategy:
             # Preparar datos para guardar
             state = {
                 'symbol': self.symbol,
+                'risk_per_trade': self.risk_per_trade,
+                'stop_loss_pct': self.stop_loss_pct,
+                'take_profit_pct': self.take_profit_pct,
+                'max_trades': self.max_trades,
+                'use_ml': self.use_ml,
                 'position': self.position,
                 'entry_price': self.entry_price,
                 'position_size': self.position_size,
+                'position_amount': self.position_size * self.entry_price if self.position != 0 else 0.0,
                 'stop_loss': self.stop_loss,
                 'take_profit': self.take_profit,
+                'trailing_stop': self.trailing_stop,
+                'trailing_active': self.trailing_active,
+                'trailing_percent': self.trailing_percent,
+                'highest_price': self.highest_price,
+                'trades': self.trades,
                 'current_balance': self.current_balance,
                 'initial_balance': self.initial_balance,
-                'trades': self.trades,
                 'performance_metrics': self.performance_metrics,
-                'saved_at': datetime.now().isoformat(),
-                'use_ml': self.use_ml
+                'saved_at': datetime.now().isoformat()
             }
             
             with open(file_path, 'w') as f:
@@ -645,6 +654,20 @@ class TechnicalStrategy:
             self.initial_balance = state['initial_balance']
             self.performance_metrics = state['performance_metrics']
             self.trades = state['trades']
+            
+            # Cargar parámetros de trading desde el archivo de estado
+            if 'risk_per_trade' in state:
+                self.risk_per_trade = state['risk_per_trade']
+                logger.info(f"Cargado risk_per_trade: {self.risk_per_trade}")
+            if 'stop_loss_pct' in state:
+                self.stop_loss_pct = state['stop_loss_pct']
+                logger.info(f"Cargado stop_loss_pct: {self.stop_loss_pct}")
+            if 'take_profit_pct' in state:
+                self.take_profit_pct = state['take_profit_pct']
+                logger.info(f"Cargado take_profit_pct: {self.take_profit_pct}")
+            if 'trailing_percent' in state:
+                self.trailing_percent = state['trailing_percent']
+                logger.info(f"Cargado trailing_percent: {self.trailing_percent}")
             
             logger.info(f"Estado cargado desde {file_path}")
             return True

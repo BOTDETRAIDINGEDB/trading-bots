@@ -60,7 +60,7 @@ def parse_arguments():
     parser.add_argument('--symbol', type=str, default='SOLUSDT', help='Par de trading')
     parser.add_argument('--simulation', action='store_true', help='Ejecutar en modo simulación')
     parser.add_argument('--balance', type=float, default=1000.0, help='Balance inicial para simulación')
-    parser.add_argument('--risk', type=float, default=0.02, help='Riesgo por operación (0.02 = 2%)')
+    parser.add_argument('--risk', type=float, default=0.03, help='Riesgo por operación (0.03 = 3%)')
     parser.add_argument('--status-interval', type=int, default=6, help='Intervalo para enviar actualizaciones de estado (horas)')
     parser.add_argument('--use-ml', action='store_true', help='Usar modelo de aprendizaje automático')
     parser.add_argument('--retrain-interval', type=int, default=20, help='Intervalo para reentrenar el modelo (minutos)')
