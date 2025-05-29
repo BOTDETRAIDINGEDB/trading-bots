@@ -608,7 +608,7 @@ class TechnicalStrategy:
             logger.error(f"Error al procesar datos con ML: {str(e)}")
             return None, None
     
-    def save_state(self, file_path='sol_bot_15m_state.json'):
+    def save_state(self, file_path='sol_bot_15min_state.json'):
         """
         Guarda el estado actual de la estrategia en un archivo JSON.
         
@@ -637,12 +637,38 @@ class TechnicalStrategy:
                 'trailing_active': self.trailing_active,
                 'trailing_percent': self.trailing_percent,
                 'highest_price': self.highest_price,
-                'trades': self.trades,
                 'current_balance': self.current_balance,
                 'initial_balance': self.initial_balance,
-                'performance_metrics': self.performance_metrics,
-                'saved_at': datetime.now().isoformat()
+                'market_conditions': {
+                    'volatility': self.get_volatility(),
+                    'trend_strength': self.get_trend_strength(),
+                    'current_price': self.entry_price if self.position != 0 else 0.0,
+                    'volume_change': self.get_volume_change(),
+                    'rsi': self.get_rsi(),
+                    'timestamp': datetime.now().isoformat()
+                },
+                'timestamp': datetime.now().isoformat()
             }
+            
+            # Procesar trades para convertir objetos datetime a strings
+            processed_trades = []
+            for trade in self.trades:
+                processed_trade = trade.copy()
+                # Convertir campos datetime a strings
+                for key, value in processed_trade.items():
+                    if isinstance(value, datetime):
+                        processed_trade[key] = value.isoformat()
+                processed_trades.append(processed_trade)
+            
+            state['trades'] = processed_trades
+            
+            # Procesar métricas de rendimiento
+            processed_metrics = self.performance_metrics.copy()
+            for key, value in processed_metrics.items():
+                if isinstance(value, datetime):
+                    processed_metrics[key] = value.isoformat()
+            
+            state['performance_metrics'] = processed_metrics
             
             with open(file_path, 'w') as f:
                 json.dump(state, f, indent=4)
