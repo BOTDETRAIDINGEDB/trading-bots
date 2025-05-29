@@ -304,11 +304,32 @@ class TechnicalStrategy:
         # Verificar tiempo en la operación (salir después de 24 horas si no se ha alcanzado SL o TP)
         if self.trades and self.trades[-1]['status'] == 'open':
             entry_time = self.trades[-1]['entry_time']
-            time_in_trade = (current_time - entry_time).total_seconds() / 3600  # Horas
             
-            if time_in_trade >= 24:
-                logger.info(f"Tiempo máximo en operación alcanzado: {time_in_trade} horas")
-                return True
+            # Convertir entry_time a datetime si es una cadena de texto
+            if isinstance(entry_time, str):
+                try:
+                    from datetime import datetime
+                    # Intentar varios formatos de fecha
+                    for fmt in ["%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"]:
+                        try:
+                            entry_time = datetime.strptime(entry_time, fmt)
+                            break
+                        except ValueError:
+                            continue
+                except Exception as e:
+                    logger.warning(f"Error al convertir entry_time a datetime: {e}")
+                    return False  # Si no podemos convertir, mejor no salir de la operación
+            
+            # Calcular tiempo en la operación
+            try:
+                time_in_trade = (current_time - entry_time).total_seconds() / 3600  # Horas
+                
+                if time_in_trade >= 24:
+                    logger.info(f"Tiempo máximo en operación alcanzado: {time_in_trade} horas")
+                    return True
+            except Exception as e:
+                logger.warning(f"Error al calcular tiempo en operación: {e} (current_time: {type(current_time)}, entry_time: {type(entry_time)})")
+                return False  # Si hay error, mejor no salir de la operación
         
         return False
     
