@@ -727,3 +727,46 @@ class TechnicalStrategy:
         except Exception as e:
             logger.error(f"Error al cargar estado: {str(e)}")
             return False
+            
+    def check_cv_results(self):
+        """
+        Verifica los resultados de validación cruzada y ajusta el comportamiento si es necesario.
+        
+        Returns:
+            bool: True si se ajustó el comportamiento basado en los resultados, False en caso contrario.
+        """
+        try:
+            import json
+            from datetime import datetime
+            
+            cv_results_file = f"{self.symbol.lower()}_cv_results.json"
+            if os.path.exists(cv_results_file):
+                try:
+                    with open(cv_results_file, 'r') as f:
+                        cv_results = json.load(f)
+                    
+                    # Verificar si los resultados son recientes (menos de 24 horas)
+                    timestamp = datetime.fromisoformat(cv_results['timestamp'])
+                    if (datetime.now() - timestamp).total_seconds() < 86400:  # 24 horas
+                        # Ajustar comportamiento basado en los resultados de CV
+                        if cv_results.get('recommendation') == 'overfitting':
+                            # Ser más conservador en las decisiones
+                            original_risk = self.risk_per_trade
+                            self.risk_per_trade *= 0.8  # Reducir el riesgo en un 20%
+                            logger.info(f"Ajustando comportamiento: modelo muestra signos de sobreajuste. Riesgo reducido de {original_risk} a {self.risk_per_trade}")
+                            
+                            # También podríamos ajustar otros parámetros
+                            if hasattr(self, 'trailing_percent'):
+                                original_trailing = self.trailing_percent
+                                self.trailing_percent *= 1.2  # Aumentar trailing stop para salir antes
+                                logger.info(f"Trailing stop ajustado de {original_trailing} a {self.trailing_percent}")
+                            
+                            return True
+                    else:
+                        logger.info(f"Resultados de validación cruzada obsoletos ({timestamp}). Considere ejecutar evaluate_model_cv.py")
+                except Exception as e:
+                    logger.error(f"Error al cargar resultados de validación cruzada: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error al verificar resultados de validación cruzada: {str(e)}")
+        
+        return False

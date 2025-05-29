@@ -199,6 +199,16 @@ def run_trading_bot(args, logger):
     if os.path.exists(state_file):
         if strategy.load_state(state_file):
             logger.info(f"Estado previo cargado desde {state_file}")
+            
+    # Verificar resultados de validación cruzada y ajustar comportamiento si es necesario
+    if args.use_ml:
+        if strategy.check_cv_results():
+            logger.info("Comportamiento ajustado basado en resultados de validación cruzada")
+            # Notificar ajuste por Telegram si está conectado
+            if telegram_connected:
+                telegram.send_message("⚠️ *Ajuste Automático* ⚠️\nEl comportamiento del bot ha sido ajustado basado en resultados de validación cruzada. Se ha reducido el nivel de riesgo para compensar posible sobreajuste del modelo.")
+        else:
+            logger.info("No se encontraron resultados de validación cruzada o no fue necesario ajustar el comportamiento")
             # Sobrescribir los parámetros de línea de comandos con los valores del archivo de estado
             # Solo si no se especificaron explícitamente en la línea de comandos
             logger.info(f"Usando parámetros del archivo de estado: risk_per_trade={strategy.risk_per_trade}, stop_loss_pct={strategy.stop_loss_pct}, take_profit_pct={strategy.take_profit_pct}, trailing_percent={strategy.trailing_percent}")
