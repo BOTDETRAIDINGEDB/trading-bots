@@ -68,7 +68,8 @@ def evaluate_model_with_cross_validation():
             credentials_path,  # En el directorio actual
             os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json'),  # Directorio padre
             os.path.expanduser('~/.credentials.json'),  # En el directorio home
-            os.path.join(os.path.expanduser('~'), 'credentials.json')  # En el directorio home sin punto
+            os.path.join(os.path.expanduser('~'), 'credentials.json'),  # En el directorio home sin punto
+            os.path.join(os.path.expanduser('~'), 'new-trading-bots-api', 'credentials.json')  # En el directorio del API
         ]
         
         # Buscar el archivo en todas las ubicaciones posibles
@@ -85,8 +86,18 @@ def evaluate_model_with_cross_validation():
                     credentials = json.load(f)
                     
                 # Extraer credenciales de Binance
-                binance_api_key = credentials.get('binance_api_key') or credentials.get('BINANCE_API_KEY')
-                binance_api_secret = credentials.get('binance_api_secret') or credentials.get('BINANCE_API_SECRET')
+                # Verificar si las credenciales están en la raíz del objeto o dentro de 'env'
+                if 'env' in credentials:
+                    # Estructura como en el archivo que vimos
+                    env = credentials['env']
+                    binance_api_key = env.get('BINANCE_API_KEY')
+                    binance_api_secret = env.get('BINANCE_API_SECRET')
+                    logger.info("Credenciales encontradas en la estructura 'env'")
+                else:
+                    # Estructura plana
+                    binance_api_key = credentials.get('binance_api_key') or credentials.get('BINANCE_API_KEY')
+                    binance_api_secret = credentials.get('binance_api_secret') or credentials.get('BINANCE_API_SECRET')
+                    logger.info("Credenciales encontradas en la estructura plana")
                 
                 if not binance_api_key or not binance_api_secret:
                     logger.error(f"No se encontraron credenciales de Binance en {credentials_path}")
