@@ -60,6 +60,210 @@ def evaluate_model_with_cross_validation():
     logger.info(f"Iniciando evaluación avanzada del modelo para {args.symbol} con {args.cv_method} ({args.folds} folds)")
     
     try:
+        # Intentar cargar credenciales directamente desde variables de entorno
+        binance_api_key = os.getenv('BINANCE_API_KEY')
+        binance_api_secret = os.getenv('BINANCE_API_SECRET')
+        
+        if binance_api_key and binance_api_secret:
+            logger.info("Credenciales de Binance encontradas en variables de entorno")
+            # Inicializar componentes con las credenciales de las variables de entorno
+            binance_api = BinanceAPI(api_key=binance_api_key, api_secret=binance_api_secret)
+            data_processor = DataProcessor()
+            ml_model = MLModel(model_path=f"{args.symbol.lower()}_model.pkl")
+            
+            # Continuar con el resto del código
+            # Inicializar notificador de Telegram si se solicita
+            telegram = None
+            if args.notify:
+                try:
+                    telegram = TelegramNotifier()
+                    logger.info("Notificador de Telegram inicializado")
+                except Exception as e:
+                    logger.error(f"Error al inicializar Telegram: {str(e)}")
+            
+            # Obtener datos históricos
+            end_time = datetime.now()
+            start_time = end_time - timedelta(days=args.lookback)
+            
+            logger.info(f"Obteniendo datos históricos desde {start_time} hasta {end_time}")
+            historical_data = binance_api.get_historical_klines(
+                symbol=args.symbol,
+                interval=args.interval,
+                start_time=int(start_time.timestamp() * 1000),
+                end_time=int(end_time.timestamp() * 1000)
+            )
+            
+            if not historical_data or len(historical_data) < 100:
+                logger.error(f"No se pudieron obtener suficientes datos históricos. Obtenidos: {len(historical_data) if historical_data else 0}")
+                return
+            
+            logger.info(f"Datos históricos obtenidos: {len(historical_data)} velas")
+            
+            # Procesar datos
+            df = data_processor.klines_to_dataframe(historical_data)
+            df = data_processor.calculate_indicators(df)
+            df = data_processor.generate_signals(df)
+            
+            # Preparar características y objetivo
+            X = ml_model.prepare_features(df)
+            y = ml_model.prepare_target(df)
+            
+            # Asegurarse de que X e y tengan la misma longitud
+            min_len = min(len(X), len(y))
+            X = X[:min_len]
+            y = y[:min_len]
+            
+            # Configurar el método de validación cruzada
+            if args.cv_method == 'kfold':
+                cv = KFold(n_splits=args.folds, shuffle=True, random_state=42)
+                cv_name = "K-Fold"
+            elif args.cv_method == 'stratified':
+                cv = StratifiedKFold(n_splits=args.folds, shuffle=True, random_state=42)
+                cv_name = "Stratified K-Fold"
+            elif args.cv_method == 'timeseries':
+                cv = TimeSeriesSplit(n_splits=args.folds)
+                cv_name = "Time Series Split"
+            
+            logger.info(f"Usando método de validación cruzada: {cv_name}")
+            
+            # Inicializar resultados
+            results = {
+                'accuracy': {'train': [], 'test': []},
+                'precision': {'train': [], 'test': []},
+                'recall': {'train': [], 'test': []},
+                'f1': {'train': [], 'test': []}
+            }
+            
+            # Realizar validación cruzada manualmente para más control
+            fold_idx = 1
+            all_predictions = []
+            all_true_values = []
+            
+            for train_idx, test_idx in cv.split(X, y):
+                X_train, X_test = X[train_idx], X[test_idx]
+                y_train, y_test = y[train_idx], y[test_idx]
+                
+                # Entrenar el modelo
+                model_clone = ml_model.model.__class__(**ml_model.model.get_params())
+                model_clone.fit(X_train, y_train)
+                
+                # Evaluar en conjunto de entrenamiento
+                y_train_pred = model_clone.predict(X_train)
+                results['accuracy']['train'].append(accuracy_score(y_train, y_train_pred))
+                results['precision']['train'].append(precision_score(y_train, y_train_pred, average='weighted', zero_division=0))
+                results['recall']['train'].append(recall_score(y_train, y_train_pred, average='weighted', zero_division=0))
+                results['f1']['train'].append(f1_score(y_train, y_train_pred, average='weighted', zero_division=0))
+                
+                # Evaluar en conjunto de prueba
+                y_test_pred = model_clone.predict(X_test)
+                results['accuracy']['test'].append(accuracy_score(y_test, y_test_pred))
+                results['precision']['test'].append(precision_score(y_test, y_test_pred, average='weighted', zero_division=0))
+                results['recall']['test'].append(recall_score(y_test, y_test_pred, average='weighted', zero_division=0))
+                results['f1']['test'].append(f1_score(y_test, y_test_pred, average='weighted', zero_division=0))
+                
+                # Guardar predicciones para análisis posterior
+                all_predictions.extend(y_test_pred)
+                all_true_values.extend(y_test)
+                
+                logger.info(f"Fold {fold_idx}/{args.folds} completado - Accuracy: {results['accuracy']['test'][-1]:.4f}, F1: {results['f1']['test'][-1]:.4f}")
+                fold_idx += 1
+            
+            # Calcular estadísticas
+            stats = {}
+            for metric in results:
+                train_mean = np.mean(results[metric]['train'])
+                train_std = np.std(results[metric]['train'])
+                test_mean = np.mean(results[metric]['test'])
+                test_std = np.std(results[metric]['test'])
+                gap = train_mean - test_mean
+                
+                stats[metric] = {
+                    'train_mean': float(train_mean),
+                    'train_std': float(train_std),
+                    'test_mean': float(test_mean),
+                    'test_std': float(test_std),
+                    'gap': float(gap)
+                }
+                
+                logger.info(f"{metric.capitalize()} - Train: {train_mean:.4f} (±{train_std:.4f}), Test: {test_mean:.4f} (±{test_std:.4f}), Gap: {gap:.4f}")
+            
+            # Análisis de sobreajuste
+            max_gap = max([stats[m]['gap'] for m in stats])
+            if max_gap > 0.2:
+                overfitting_level = "alto" if max_gap > 0.3 else "moderado"
+                logger.warning(f"Posible sobreajuste {overfitting_level} detectado. Gap máximo: {max_gap:.4f}")
+                recommendation = "overfitting"
+            else:
+                logger.info("No se detectó sobreajuste significativo")
+                recommendation = "stable"
+            
+            # Análisis de confusión
+            cm = confusion_matrix(all_true_values, all_predictions)
+            logger.info(f"Matriz de confusión:\n{cm}")
+            
+            # Análisis de importancia de características
+            top_features = []
+            if hasattr(ml_model.model, 'feature_importances_'):
+                # Obtener nombres de características
+                feature_names = [
+                    'sma_20', 'sma_50', 'sma_200', 'rsi_14', 'macd', 'macd_signal', 'macd_histogram',
+                    'bb_upper', 'bb_middle', 'bb_lower', 'atr_14', 'relative_volume', 'pct_change',
+                    'sma_20_50_ratio', 'sma_20_200_ratio', 'price_to_bb_upper', 'price_to_bb_lower'
+                ]
+                
+                # Asegurarse de que la longitud coincida
+                if len(feature_names) == len(ml_model.model.feature_importances_):
+                    # Ordenar características por importancia
+                    importances = ml_model.model.feature_importances_
+                    indices = np.argsort(importances)[::-1]
+                    
+                    logger.info("Importancia de características:")
+                    for i in range(min(10, len(indices))):
+                        feature_idx = indices[i]
+                        logger.info(f"{i+1}. {feature_names[feature_idx]}: {importances[feature_idx]:.4f}")
+                        top_features.append({
+                            'name': feature_names[feature_idx],
+                            'importance': float(importances[feature_idx])
+                        })
+            
+            # Guardar resultados en JSON
+            results_summary = {
+                'timestamp': datetime.now().isoformat(),
+                'symbol': args.symbol,
+                'cv_method': cv_name,
+                'folds': args.folds,
+                'metrics': stats,
+                'recommendation': recommendation,
+                'top_features': top_features,
+                'confusion_matrix': cm.tolist()
+            }
+            
+            output_file = f"{args.symbol.lower()}_cv_results.json"
+            with open(output_file, 'w') as f:
+                json.dump(results_summary, f, indent=4)
+            
+            logger.info(f"Resultados guardados en {output_file}")
+            
+            # Enviar notificación por Telegram si se solicita
+            if telegram:
+                message = f"📊 *Evaluación del modelo ML para {args.symbol}*\n\n"
+                message += f"*Método CV:* {cv_name} ({args.folds} folds)\n"
+                message += f"*Accuracy:* {stats['accuracy']['test_mean']:.4f} (±{stats['accuracy']['test_std']:.4f})\n"
+                message += f"*F1 Score:* {stats['f1']['test_mean']:.4f} (±{stats['f1']['test_std']:.4f})\n\n"
+                
+                if recommendation == "overfitting":
+                    message += f"⚠️ *Alerta:* Posible sobreajuste {overfitting_level} detectado (gap: {max_gap:.4f})\n"
+                else:
+                    message += "✅ *Estado:* Modelo estable, sin sobreajuste significativo\n"
+                
+                telegram.send_message(message)
+            
+            logger.info("Evaluación con validación cruzada completada")
+            return
+        
+        # Si no se encontraron variables de entorno, intentar cargar desde archivo
+        logger.info("No se encontraron credenciales en variables de entorno. Buscando en archivos...")
+        
         # Cargar credenciales desde credentials.json
         credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
         
