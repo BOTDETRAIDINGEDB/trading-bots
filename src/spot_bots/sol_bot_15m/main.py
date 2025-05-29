@@ -199,6 +199,9 @@ def run_trading_bot(args, logger):
     if os.path.exists(state_file):
         if strategy.load_state(state_file):
             logger.info(f"Estado previo cargado desde {state_file}")
+            # Sobrescribir los parámetros de línea de comandos con los valores del archivo de estado
+            # Solo si no se especificaron explícitamente en la línea de comandos
+            logger.info(f"Usando parámetros del archivo de estado: risk_per_trade={strategy.risk_per_trade}, stop_loss_pct={strategy.stop_loss_pct}, take_profit_pct={strategy.take_profit_pct}, trailing_percent={strategy.trailing_percent}")
         else:
             logger.warning(f"No se pudo cargar el estado previo desde {state_file}")
     
