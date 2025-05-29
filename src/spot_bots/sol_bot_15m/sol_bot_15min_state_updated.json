@@ -1,0 +1,42 @@
+{
+    "symbol": "SOLUSDT",
+    "risk_per_trade": 0.03,
+    "stop_loss_pct": 0.05,
+    "take_profit_pct": 0.03,
+    "max_trades": 3,
+    "use_ml": true,
+    "position": 0,
+    "entry_price": 0.0,
+    "position_size": 0.0,
+    "position_amount": 0.0,
+    "stop_loss": 0.0,
+    "take_profit": 0.0,
+    "trailing_stop": 0.0,
+    "trailing_active": false,
+    "trailing_percent": 0.01,
+    "highest_price": 0.0,
+    "trades": [],
+    "current_balance": 100.0,
+    "initial_balance": 100.0,
+    "performance_metrics": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "win_rate": 0.0,
+        "avg_profit": 0.0,
+        "avg_loss": 0.0,
+        "profit_factor": 0.0,
+        "max_drawdown": 0.0,
+        "current_drawdown": 0.0,
+        "total_profit": 0.0
+    },
+    "market_conditions": {
+        "volatility": 0.21638752813451567,
+        "trend_strength": 0.3643417828076702,
+        "current_price": 172.64,
+        "volume_change": 0.06309310887412933,
+        "rsi": 58.87096774193541,
+        "timestamp": "2025-05-29T01:25:15.846582"
+    },
+    "timestamp": "2025-05-29T01:25:15.847163"
+}
