@@ -135,16 +135,22 @@ class TechnicalStrategy:
             else:
                 return False
         else:
-            # Comportamiento original basado solo en señales técnicas
+            # Comportamiento basado solo en señales técnicas cuando no se usa ML
             # MODIFICADO: Ser más sensible a señales técnicas
-            if signal >= 0:  # Incluir señales neutrales (0) como potenciales entradas
+            if signal == 1:  # Señal de compra
+                logger.info(f"Señal técnica de compra detectada: {signal}")
                 return self._validate_trade_conditions(price, available_balance)
-            
-            # Por ahora solo implementamos posiciones largas (compra)
-            if signal != 1:
+            elif signal == 0:  # Señal neutral - considerar como potencial entrada con condiciones más estrictas
+                # Verificar condiciones adicionales para señales neutrales (como RSI, volatilidad, etc.)
+                if hasattr(self, 'df') and not self.df.empty:
+                    last_row = self.df.iloc[-1]
+                    # Entrar si RSI está en zona de sobreventa o cerca
+                    if 'rsi_14' in last_row and last_row['rsi_14'] < 40:
+                        logger.info(f"Señal neutral con RSI favorable ({last_row['rsi_14']}): considerando entrada")
+                        return self._validate_trade_conditions(price, available_balance)
                 return False
-                
-            return self._validate_trade_conditions(price, available_balance)
+            else:  # Señal de venta (-1)
+                return False
     
     def _validate_trade_conditions(self, price, available_balance):
         """
