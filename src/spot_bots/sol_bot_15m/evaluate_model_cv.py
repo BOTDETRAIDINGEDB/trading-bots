@@ -62,11 +62,24 @@ def evaluate_model_with_cross_validation():
     try:
         # Cargar credenciales desde credentials.json
         credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
-        if not os.path.exists(credentials_path):
-            # Buscar en el directorio padre
-            credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
         
-        if os.path.exists(credentials_path):
+        # Lista de posibles ubicaciones de credenciales
+        possible_paths = [
+            credentials_path,  # En el directorio actual
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json'),  # Directorio padre
+            os.path.expanduser('~/.credentials.json'),  # En el directorio home
+            os.path.join(os.path.expanduser('~'), 'credentials.json')  # En el directorio home sin punto
+        ]
+        
+        # Buscar el archivo en todas las ubicaciones posibles
+        credentials_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                credentials_path = path
+                logger.info(f"Encontrado archivo de credenciales en: {path}")
+                break
+        
+        if credentials_path and os.path.exists(credentials_path):
             try:
                 with open(credentials_path, 'r') as f:
                     credentials = json.load(f)
