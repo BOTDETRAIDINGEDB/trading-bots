@@ -422,6 +422,9 @@ def run_trading_bot(args, logger):
                     df = data_processor.calculate_indicators(df)
                     df = data_processor.generate_signals(df)
                     
+                    # Asignar DataFrame a la estrategia para acceso a indicadores
+                    strategy.df = df.copy()
+                    
                     # Procesar con ML si está habilitado
                     ml_prediction = None
                     retrain_metrics = None

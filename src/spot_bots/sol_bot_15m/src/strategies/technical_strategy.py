@@ -102,6 +102,22 @@ class TechnicalStrategy:
         logger.info(f"Tamaño de posición calculado: {position_size} unidades a precio {price}")
         return position_size
     
+    def _check_rsi_favorable(self):
+        """
+        Verifica si el RSI está en una zona favorable para entrar (sobreventa o cerca).
+        
+        Returns:
+            bool: True si el RSI es favorable para entrar, False en caso contrario.
+            float: El valor del RSI si es favorable, None en caso contrario.
+        """
+        if hasattr(self, 'df') and not self.df.empty:
+            last_row = self.df.iloc[-1]
+            if 'rsi_14' in last_row and last_row['rsi_14'] < 40:
+                rsi_value = last_row['rsi_14']
+                logger.info(f"RSI en zona favorable: {rsi_value} (< 40)")
+                return True, rsi_value
+        return False, None
+    
     def should_enter_trade(self, signal, price, available_balance, ml_prediction=None):
         """
         Determina si se debe entrar en una operación.
@@ -115,9 +131,16 @@ class TechnicalStrategy:
         Returns:
             bool: True si se debe entrar en la operación, False en caso contrario.
         """
+        # Registrar la llamada a la función para diagnóstico
+        logger.info(f"should_enter_trade llamada con signal={signal}, price={price}, ml_prediction={ml_prediction if ml_prediction is not None else 'None'}")
+        
         # Si ya estamos en una posición, no entrar en otra
         if self.position != 0:
+            logger.info("Ya estamos en una posición, no se considera entrada")
             return False
+        
+        # Verificar RSI favorable
+        rsi_favorable, rsi_value = self._check_rsi_favorable()
         
         # Si estamos usando ML y tenemos una predicción, combinar con la señal técnica
         if self.use_ml and ml_prediction is not None:
@@ -128,26 +151,26 @@ class TechnicalStrategy:
             if hasattr(ml_prediction, 'shape') and len(ml_prediction.shape) > 0:
                 logger.info(f"Predicción ML es un array de forma {ml_prediction.shape}, usando valor simplificado: {ml_pred_value}")
             
-            # MODIFICADO: Hacer más sensible - entrar si cualquiera de las señales es positiva
+            # MODIFICADO: Considerar también señales neutrales con RSI favorable
             if ml_pred_value == 1 or signal == 1:
                 logger.info(f"Señal de entrada detectada: ML={ml_pred_value}, Técnica={signal}")
                 return self._validate_trade_conditions(price, available_balance)
+            elif signal == 0 and rsi_favorable:
+                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada")
+                return self._validate_trade_conditions(price, available_balance)
             else:
+                logger.info(f"No se cumplen condiciones para entrada: ML={ml_pred_value}, Técnica={signal}, RSI favorable={rsi_favorable}")
                 return False
         else:
             # Comportamiento basado solo en señales técnicas cuando no se usa ML
-            # MODIFICADO: Ser más sensible a señales técnicas
             if signal == 1:  # Señal de compra
                 logger.info(f"Señal técnica de compra detectada: {signal}")
                 return self._validate_trade_conditions(price, available_balance)
-            elif signal == 0:  # Señal neutral - considerar como potencial entrada con condiciones más estrictas
-                # Verificar condiciones adicionales para señales neutrales (como RSI, volatilidad, etc.)
-                if hasattr(self, 'df') and not self.df.empty:
-                    last_row = self.df.iloc[-1]
-                    # Entrar si RSI está en zona de sobreventa o cerca
-                    if 'rsi_14' in last_row and last_row['rsi_14'] < 40:
-                        logger.info(f"Señal neutral con RSI favorable ({last_row['rsi_14']}): considerando entrada")
-                        return self._validate_trade_conditions(price, available_balance)
+            elif signal == 0 and rsi_favorable:  # Señal neutral con RSI favorable
+                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada")
+                return self._validate_trade_conditions(price, available_balance)
+            else:
+                logger.info(f"No se cumplen condiciones para entrada: Técnica={signal}, RSI favorable={rsi_favorable}")
                 return False
             else:  # Señal de venta (-1)
                 return False
