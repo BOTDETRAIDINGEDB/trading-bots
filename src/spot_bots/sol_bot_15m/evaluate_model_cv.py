@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from sklearn.model_selection import KFold, StratifiedKFold, TimeSeriesSplit
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.metrics import confusion_matrix, classification_report
+import traceback
 
 # Ajustar el PYTHONPATH para encontrar los módulos correctamente
 bot_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,8 +60,36 @@ def evaluate_model_with_cross_validation():
     logger.info(f"Iniciando evaluación avanzada del modelo para {args.symbol} con {args.cv_method} ({args.folds} folds)")
     
     try:
+        # Cargar credenciales desde credentials.json
+        credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
+        if not os.path.exists(credentials_path):
+            # Buscar en el directorio padre
+            credentials_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json')
+        
+        if os.path.exists(credentials_path):
+            try:
+                with open(credentials_path, 'r') as f:
+                    credentials = json.load(f)
+                    
+                # Extraer credenciales de Binance
+                binance_api_key = credentials.get('binance_api_key') or credentials.get('BINANCE_API_KEY')
+                binance_api_secret = credentials.get('binance_api_secret') or credentials.get('BINANCE_API_SECRET')
+                
+                if not binance_api_key or not binance_api_secret:
+                    logger.error(f"No se encontraron credenciales de Binance en {credentials_path}")
+                    return
+                    
+                logger.info(f"Credenciales de Binance cargadas desde {credentials_path}")
+            except Exception as e:
+                logger.error(f"Error al cargar credenciales: {str(e)}")
+                logger.debug(traceback.format_exc())
+                return
+        else:
+            logger.error(f"No se encontró el archivo de credenciales en {credentials_path}")
+            return
+        
         # Inicializar componentes
-        binance_api = BinanceAPI()
+        binance_api = BinanceAPI(api_key=binance_api_key, api_secret=binance_api_secret)
         data_processor = DataProcessor()
         ml_model = MLModel(model_path=f"{args.symbol.lower()}_model.pkl")
         
