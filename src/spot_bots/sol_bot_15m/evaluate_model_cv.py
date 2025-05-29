@@ -69,16 +69,24 @@ def evaluate_model_with_cross_validation():
             os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json'),  # Directorio padre
             os.path.expanduser('~/.credentials.json'),  # En el directorio home
             os.path.join(os.path.expanduser('~'), 'credentials.json'),  # En el directorio home sin punto
-            os.path.join(os.path.expanduser('~'), 'new-trading-bots-api', 'credentials.json')  # En el directorio del API
+            os.path.join(os.path.expanduser('~'), 'new-trading-bots-api', 'credentials.json'),  # En el directorio del API
+            '/home/edisonbautistaruiz2025/new-trading-bots-api/credentials.json',  # Ruta absoluta al API
+            '/home/edisonbautistaruiz2025/credentials.json',  # Ruta absoluta al home
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'new-trading-bots-api', 'credentials.json'),  # Relativa al directorio actual
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'credentials.json')  # Relativa al directorio actual
         ]
         
         # Buscar el archivo en todas las ubicaciones posibles
         credentials_path = None
+        logger.info("Buscando archivo de credenciales en las siguientes ubicaciones:")
         for path in possible_paths:
+            logger.info(f"  - Verificando: {path}")
             if os.path.exists(path):
                 credentials_path = path
-                logger.info(f"Encontrado archivo de credenciales en: {path}")
+                logger.info(f"  ✓ Encontrado archivo de credenciales en: {path}")
                 break
+            else:
+                logger.info(f"  ✗ No encontrado en: {path}")
         
         if credentials_path and os.path.exists(credentials_path):
             try:
