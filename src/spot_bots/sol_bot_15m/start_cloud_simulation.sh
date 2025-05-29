@@ -9,7 +9,7 @@ INTERVAL="15m"
 SIMULATION_BALANCE=100   # Balance ficticio en USDT
 RETRAIN_INTERVAL=15      # Reentrenamiento cada 15 minutos
 STATUS_INTERVAL=1        # Actualización de estado cada 1 hora
-RISK=0.02                # 2% de riesgo por operación
+RISK=0.03                # 3% de riesgo por operación
 
 # Directorio del bot (ruta absoluta en Google Cloud VM)
 BOT_DIR="/home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_15m"
@@ -133,7 +133,7 @@ echo "  • Símbolo: $SYMBOL"
 echo "  • Intervalo: $INTERVAL"
 echo "  • Balance de simulación: $SIMULATION_BALANCE USDT"
 echo "  • Reentrenamiento ML: Cada $RETRAIN_INTERVAL minutos"
-echo "  • Riesgo por operación: ${RISK}%"
+echo "  • Riesgo por operación: ${RISK}% (optimizado para mayor actividad)"
 echo "  • Usando credenciales reales de Binance para datos de mercado"
 echo "  • Operando con USDT ficticio"
 echo "==================================================================="
