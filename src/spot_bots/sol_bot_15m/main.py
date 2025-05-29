@@ -6,7 +6,7 @@ import logging.handlers
 import argparse
 import json
 import sys
-import signal
+import signal as sys_signal
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
@@ -85,8 +85,8 @@ def signal_handler(sig, frame):
 def run_trading_bot(args, logger):
     """Ejecuta el bot de trading."""
     # Configurar manejadores de señales para salida limpia
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    sys_signal.signal(sys_signal.SIGINT, signal_handler)
+    sys_signal.signal(sys_signal.SIGTERM, signal_handler)
     
     # Inicializar componentes
     binance_api = BinanceAPI()
