@@ -172,8 +172,6 @@ class TechnicalStrategy:
             else:
                 logger.info(f"No se cumplen condiciones para entrada: Técnica={signal}, RSI favorable={rsi_favorable}")
                 return False
-            else:  # Señal de venta (-1)
-                return False
     
     def _validate_trade_conditions(self, price, available_balance):
         """
