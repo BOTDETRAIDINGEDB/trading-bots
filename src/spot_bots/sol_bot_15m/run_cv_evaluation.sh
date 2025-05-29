@@ -19,6 +19,31 @@ if [ -z "$CREDENTIALS_FILE" ]; then
     CREDENTIALS_FILE=$(grep -o 'CREDENTIALS_PATH=.*' start_cloud_simulation.sh | head -n 1 | cut -d= -f2 | tr -d '"')
 fi
 
+# Reemplazar $HOME con la ruta absoluta
+CREDENTIALS_FILE=$(echo "$CREDENTIALS_FILE" | sed "s|\$HOME|$HOME|g")
+
+# Probar con rutas alternativas si no se encuentra
+if [ ! -f "$CREDENTIALS_FILE" ]; then
+    echo "Buscando archivo de credenciales en ubicaciones alternativas..."
+    
+    # Lista de posibles ubicaciones
+    POSSIBLE_PATHS=(
+        "$HOME/new-trading-bots-api/credentials.json"
+        "/home/edisonbautistaruiz2025/new-trading-bots-api/credentials.json"
+        "/home/edisonbautistaruiz2025/trading-bots-api/credentials.json"
+        "$HOME/credentials.json"
+        "/home/edisonbautistaruiz2025/credentials.json"
+    )
+    
+    for path in "${POSSIBLE_PATHS[@]}"; do
+        if [ -f "$path" ]; then
+            echo "Encontrado archivo de credenciales en: $path"
+            CREDENTIALS_FILE="$path"
+            break
+        fi
+    done
+fi
+
 if [ -z "$CREDENTIALS_FILE" ]; then
     echo "No se pudo determinar la ubicación del archivo de credenciales"
     exit 1
