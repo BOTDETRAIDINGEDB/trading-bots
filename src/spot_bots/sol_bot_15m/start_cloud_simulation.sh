@@ -185,7 +185,7 @@ sleep 3  # Esperar a que todas las sesiones se cierren completamente
 
 # 1. Iniciar el bot principal en una sesión screen
 echo "Iniciando bot principal en sesión screen '$BOT_NAME'..."
-screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 main.py \
+screen -dmS $BOT_NAME bash -c "cd $BOT_DIR && BINANCE_API_KEY=$BINANCE_API_KEY BINANCE_API_SECRET=$BINANCE_API_SECRET TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID PYTHONPATH=$PYTHONPATH python3 main.py \
     --use-ml \
     --retrain-interval $RETRAIN_INTERVAL \
     --interval $INTERVAL \
@@ -210,7 +210,7 @@ done
 sleep 3  # Esperar a que todas las sesiones se cierren completamente
 
 echo "Iniciando componente adaptativo en sesión screen '$ADAPTIVE_BOT_NAME'..."
-screen -dmS $ADAPTIVE_BOT_NAME bash -c "cd $BOT_DIR && PYTHONPATH=$PYTHONPATH python3 adaptive_main.py \
+screen -dmS $ADAPTIVE_BOT_NAME bash -c "cd $BOT_DIR && BINANCE_API_KEY=$BINANCE_API_KEY BINANCE_API_SECRET=$BINANCE_API_SECRET TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID PYTHONPATH=$PYTHONPATH python3 adaptive_main.py \
     --symbol $SYMBOL \
     --interval $INTERVAL \
     --lookback 90 \
