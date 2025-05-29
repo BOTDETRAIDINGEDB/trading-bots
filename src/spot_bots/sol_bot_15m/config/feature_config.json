@@ -76,10 +76,10 @@
         "type": "classification",
         "classes": 3,
         "thresholds": {
-            "bullish": 0.005,
-            "bearish": -0.005
+            "bullish": 0.003,
+            "bearish": -0.003
         },
-        "horizon": 3
+        "horizon": 2
     },
     "normalization": {
         "method": "standard",
