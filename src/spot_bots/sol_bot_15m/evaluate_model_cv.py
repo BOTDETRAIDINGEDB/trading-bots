@@ -145,7 +145,27 @@ def evaluate_model_with_cross_validation():
                 
                 # Entrenar el modelo
                 model_clone = ml_model.model.__class__(**ml_model.model.get_params())
-                model_clone.fit(X_train, y_train)
+                
+                # Verificar si hay suficientes clases en los datos de entrenamiento
+                unique_classes = np.unique(y_train)
+                if len(unique_classes) < 2:
+                    logger.warning(f"Solo hay una clase ({unique_classes}) en los datos de entrenamiento del fold {fold_idx}. Ajustando parámetros...")
+                    # Modificar parámetros para manejar una sola clase
+                    params = model_clone.get_params()
+                    if 'class_weight' in params:
+                        params['class_weight'] = None
+                    model_clone = ml_model.model.__class__(**params)
+                
+                # Entrenar el modelo con los datos disponibles
+                try:
+                    model_clone.fit(X_train, y_train)
+                except Exception as e:
+                    logger.warning(f"Error al entrenar el modelo en el fold {fold_idx}: {str(e)}")
+                    logger.warning(f"Clases únicas en y_train: {unique_classes}")
+                    # Si falla, crear un modelo simple que siempre predice la clase mayoritaria
+                    from sklearn.dummy import DummyClassifier
+                    model_clone = DummyClassifier(strategy='most_frequent')
+                    model_clone.fit(X_train, y_train)
                 
                 # Evaluar en conjunto de entrenamiento
                 y_train_pred = model_clone.predict(X_train)
