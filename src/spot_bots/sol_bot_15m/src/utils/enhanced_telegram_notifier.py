@@ -558,7 +558,7 @@ _Bot esperando señales de entrada..._
         
         message = f"""🔵 *NUEVA OPERACIÓN - BOT SOL* 🔵
 
-*Tipo:* {'Compra 📈' if trade.get('type') == 'long' else 'Venta 📉'}
+*Tipo:* {'Compra (Long) 📈' if trade.get('type') == 'long' else 'Venta (Short) 📉'}
 
 💰 *Detalles:*
 • 🏷️ Precio entrada de SOL: `{self.format_price(trade.get('entry_price', 0))} USDT`
