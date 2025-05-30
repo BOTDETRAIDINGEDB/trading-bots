@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-05-29 20:02:00",
+  "symbol": "SOLUSDT",
+  "interval": "15m",
+  "cv_method": "kfold",
+  "folds": 5,
+  "metrics": {
+    "train": {
+      "accuracy": 0.85,
+      "precision": 0.83,
+      "recall": 0.82,
+      "f1": 0.82
+    },
+    "test": {
+      "accuracy": 0.78,
+      "precision": 0.76,
+      "recall": 0.75,
+      "f1": 0.75
+    }
+  },
+  "recommended_params": {
+    "risk_per_trade": 0.025,
+    "stop_loss_pct": 0.06,
+    "take_profit_pct": 0.035,
+    "trailing_percent": 0.01
+  }
+}
