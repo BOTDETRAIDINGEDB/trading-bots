@@ -90,6 +90,26 @@ Este documento describe los diferentes scripts de inicio disponibles para el bot
 ./stop.sh
 ```
 
+### `cleanup_bot_sessions.sh`
+
+**Propósito**: Limpiar todas las sesiones del bot y reiniciar limpiamente.
+
+**Características**:
+- Detiene todas las sesiones existentes del bot (principal y adaptativo)
+- Elimina archivos de control que podrían bloquear las notificaciones
+- Verifica las credenciales configuradas
+- Reinicia el bot en modo simulación
+
+**Cuándo usar**:
+- Cuando necesitas hacer una limpieza completa de todas las sesiones
+- Cuando el bot se ha quedado en un estado inconsistente
+- Después de actualizar el código desde GitHub
+
+**Comando**:
+```bash
+./cleanup_bot_sessions.sh
+```
+
 ## Guía de Selección
 
 1. **¿Estás en fase de desarrollo y pruebas?**
@@ -100,6 +120,62 @@ Este documento describe los diferentes scripts de inicio disponibles para el bot
 
 3. **¿Estás listo para operar con fondos reales?**
    - Usa `start_bot.sh`
+
+## Soporte para Posiciones SHORT
+
+**Nueva funcionalidad**: El bot ahora soporta posiciones SHORT, lo que le permite operar en mercados bajistas.
+
+**Mejoras implementadas**:
+- Interpretación correcta de señales de venta (-1)
+- Entrada en posiciones SHORT cuando sea apropiado
+- Gestión adecuada de stop loss, take profit y trailing stop para posiciones cortas
+- Cálculo correcto de ganancias/pérdidas para posiciones SHORT
+
+### Comandos para Actualizar y Ejecutar con Soporte SHORT
+
+#### Actualización del Código
+```bash
+# Conectar a la máquina virtual
+ssh edisonbautistaruiz2025@iatraidingbots
+
+# Navegar al repositorio
+cd ~/new-trading-bots
+
+# Actualizar desde GitHub
+git pull origin main
+
+# Verificar que los cambios se aplicaron correctamente
+git log -1
+```
+
+#### Opciones de Ejecución
+
+**Opción 1: Iniciar con el script estándar (modo REAL)**
+```bash
+# Navegar al directorio del bot SOL
+cd ~/new-trading-bots/src/spot_bots/sol_bot_15m
+
+# Ejecutar el script de inicio
+./start_bot.sh
+```
+
+**Opción 2: Limpieza y reinicio completo**
+```bash
+# Navegar al directorio del bot SOL
+cd ~/new-trading-bots/src/spot_bots/sol_bot_15m
+
+# Ejecutar el script de limpieza
+./cleanup_bot_sessions.sh
+```
+
+**Opción 3: Iniciar manualmente con parámetros específicos**
+```bash
+# Para modo simulación
+screen -dmS sol_bot_sim python3 main.py --symbol SOLUSDT --interval 15m --simulation --use-ml --risk 0.02
+
+# Para modo real con parámetros personalizados
+screen -dmS sol_bot python3 main.py --symbol SOLUSDT --interval 15m --use-ml --retrain-interval 60 --risk 0.02 --status-interval 1
+```
 
 ## Notas Importantes
 
