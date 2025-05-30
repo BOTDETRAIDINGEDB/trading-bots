@@ -812,6 +812,11 @@ class TechnicalStrategy:
         Returns:
             bool: True si se cargó correctamente, False en caso contrario.
         """
+        # Verificar que no estamos cargando desde un archivo de respaldo
+        if 'backup' in file_path:
+            logger.warning(f"Se intentó cargar desde un archivo de respaldo: {file_path}. Ignorando.")
+            return False
+            
         if not os.path.exists(file_path):
             logger.warning(f"Archivo de estado {file_path} no encontrado.")
             return False
@@ -830,6 +835,42 @@ class TechnicalStrategy:
             self.initial_balance = state['initial_balance']
             self.performance_metrics = state['performance_metrics']
             self.trades = state['trades']
+            
+            # Verificar si hay posiciones abiertas demasiado antiguas (más de 24 horas)
+            import datetime
+            current_time = datetime.datetime.now()
+            
+            if self.position != 0 and 'trades' in state and state['trades']:
+                # Ordenar trades por fecha y obtener el más reciente que no esté cerrado
+                open_trades = [t for t in state['trades'] if 'exit_time' not in t]
+                
+                if open_trades:
+                    # Obtener el trade abierto más reciente
+                    latest_open_trade = max(open_trades, key=lambda x: x.get('entry_time', ''))
+                    
+                    # Verificar si el trade ha estado abierto por más de 24 horas
+                    if 'entry_time' in latest_open_trade:
+                        entry_time_str = latest_open_trade['entry_time']
+                        try:
+                            entry_time = datetime.datetime.strptime(entry_time_str, '%Y-%m-%d %H:%M:%S')
+                            time_diff = current_time - entry_time
+                            
+                            if time_diff.total_seconds() > 24 * 60 * 60:  # 24 horas en segundos
+                                logger.warning(f"Posición abierta desde hace más de 24 horas. Reiniciando posición.")
+                                self.position = 0
+                                self.entry_price = 0.0
+                                self.position_size = 0.0
+                                self.stop_loss = 0.0
+                                self.take_profit = 0.0
+                                
+                                # Cerrar el trade en el historial
+                                latest_open_trade['exit_time'] = current_time.strftime('%Y-%m-%d %H:%M:%S')
+                                latest_open_trade['exit_price'] = 0.0
+                                latest_open_trade['pnl'] = 0.0
+                                latest_open_trade['status'] = 'CLOSED_FORCE'
+                                latest_open_trade['exit_reason'] = 'FORCE_RESET'
+                        except Exception as e:
+                            logger.error(f"Error al procesar fecha de entrada: {str(e)}")
             
             # Cargar parámetros de trading desde el archivo de estado
             if 'risk_per_trade' in state:
