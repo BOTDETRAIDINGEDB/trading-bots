@@ -767,8 +767,36 @@ class TechnicalStrategy:
                         cv_results = json.load(f)
                     
                     # Verificar si los resultados son recientes (menos de 24 horas)
-                    timestamp = datetime.fromisoformat(cv_results['timestamp'])
+                    timestamp = datetime.fromisoformat(cv_results['timestamp']) if 'timestamp' in cv_results else datetime.strptime(cv_results.get('timestamp', '2025-01-01 00:00:00'), '%Y-%m-%d %H:%M:%S')
                     if (datetime.now() - timestamp).total_seconds() < 86400:  # 24 horas
+                        # Cargar parámetros recomendados si existen
+                        if 'recommended_params' in cv_results:
+                            recommended = cv_results['recommended_params']
+                            
+                            # Guardar los valores originales para el log
+                            original_risk = self.risk_per_trade
+                            original_stop_loss = self.stop_loss_pct
+                            original_take_profit = self.take_profit_pct
+                            original_trailing = self.trailing_percent if hasattr(self, 'trailing_percent') else 0.01
+                            
+                            # Actualizar parámetros con los recomendados
+                            if 'risk_per_trade' in recommended:
+                                self.risk_per_trade = recommended['risk_per_trade']
+                            if 'stop_loss_pct' in recommended:
+                                self.stop_loss_pct = recommended['stop_loss_pct']
+                            if 'take_profit_pct' in recommended:
+                                self.take_profit_pct = recommended['take_profit_pct']
+                            if 'trailing_percent' in recommended and hasattr(self, 'trailing_percent'):
+                                self.trailing_percent = recommended['trailing_percent']
+                            
+                            logger.info(f"Parámetros actualizados desde resultados de validación cruzada:")
+                            logger.info(f"  - Risk per trade: {original_risk} -> {self.risk_per_trade}")
+                            logger.info(f"  - Stop loss: {original_stop_loss} -> {self.stop_loss_pct}")
+                            logger.info(f"  - Take profit: {original_take_profit} -> {self.take_profit_pct}")
+                            logger.info(f"  - Trailing stop: {original_trailing} -> {self.trailing_percent if hasattr(self, 'trailing_percent') else 0.01}")
+                            
+                            return True
+                        
                         # Ajustar comportamiento basado en los resultados de CV
                         if cv_results.get('recommendation') == 'overfitting':
                             # Ser más conservador en las decisiones
