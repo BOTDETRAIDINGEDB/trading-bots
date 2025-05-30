@@ -373,33 +373,58 @@ class TechnicalStrategy:
         
         # Verificar tiempo en la operación (salir después de 24 horas si no se ha alcanzado SL o TP)
         if self.trades and self.trades[-1]['status'] == 'open':
-            entry_time = self.trades[-1]['entry_time']
-            
-            # Convertir entry_time a datetime si es una cadena de texto
-            if isinstance(entry_time, str):
-                try:
+            try:
+                # Obtener el tiempo de entrada
+                entry_time = self.trades[-1]['entry_time']
+                
+                # Asegurar que entry_time sea un objeto datetime
+                if isinstance(entry_time, str):
                     from datetime import datetime
-                    # Intentar varios formatos de fecha
-                    for fmt in ["%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"]:
+                    # Lista ampliada de formatos posibles de fecha
+                    date_formats = [
+                        "%Y-%m-%d %H:%M:%S.%f", 
+                        "%Y-%m-%d %H:%M:%S", 
+                        "%Y-%m-%dT%H:%M:%S.%f", 
+                        "%Y-%m-%dT%H:%M:%S",
+                        "%Y-%m-%d %H:%M:%S%z",
+                        "%Y-%m-%dT%H:%M:%S%z"
+                    ]
+                    
+                    # Intentar convertir con cada formato
+                    for fmt in date_formats:
                         try:
                             entry_time = datetime.strptime(entry_time, fmt)
+                            logger.info(f"Convertido entry_time '{self.trades[-1]['entry_time']}' a datetime usando formato {fmt}")
                             break
                         except ValueError:
                             continue
-                except Exception as e:
-                    logger.warning(f"Error al convertir entry_time a datetime: {e}")
-                    return False  # Si no podemos convertir, mejor no salir de la operación
-            
-            # Calcular tiempo en la operación
-            try:
+                    else:
+                        # Si ningún formato funciona
+                        logger.warning(f"No se pudo convertir entry_time '{self.trades[-1]['entry_time']}' a datetime con ninguno de los formatos disponibles")
+                        return False
+                
+                # Verificar que ambos son objetos datetime antes de restar
+                if not isinstance(current_time, datetime):
+                    logger.warning(f"current_time no es un objeto datetime: {type(current_time)}")
+                    return False
+                    
+                if not isinstance(entry_time, datetime):
+                    logger.warning(f"entry_time no es un objeto datetime después de la conversión: {type(entry_time)}")
+                    return False
+                
+                # Calcular tiempo en la operación
                 time_in_trade = (current_time - entry_time).total_seconds() / 3600  # Horas
+                logger.info(f"Tiempo en operación: {time_in_trade:.2f} horas")
                 
                 if time_in_trade >= 24:
-                    logger.info(f"Tiempo máximo en operación alcanzado: {time_in_trade} horas")
+                    logger.info(f"Tiempo máximo en operación alcanzado: {time_in_trade:.2f} horas")
                     return True
+                    
             except Exception as e:
-                logger.warning(f"Error al calcular tiempo en operación: {e} (current_time: {type(current_time)}, entry_time: {type(entry_time)})")
-                return False  # Si hay error, mejor no salir de la operación
+                logger.error(f"Error al calcular tiempo en operación: {str(e)}")
+                logger.error(f"current_time: {current_time} ({type(current_time)}), entry_time: {entry_time if 'entry_time' in locals() else 'No definido'} ({type(entry_time) if 'entry_time' in locals() else 'N/A'})")
+                # No salimos de la operación si hay un error
+                return False
         
         return False
     
