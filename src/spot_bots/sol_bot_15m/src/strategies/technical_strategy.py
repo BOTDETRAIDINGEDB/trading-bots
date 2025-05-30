@@ -142,6 +142,10 @@ class TechnicalStrategy:
         # Verificar RSI favorable
         rsi_favorable, rsi_value = self._check_rsi_favorable()
         
+        # Inicializar next_position_type si no existe
+        if not hasattr(self, 'next_position_type'):
+            self.next_position_type = 'long'
+        
         # Si estamos usando ML y tenemos una predicción, combinar con la señal técnica
         if self.use_ml and ml_prediction is not None:
             # Convertir ml_prediction a un valor simple si es un array
@@ -151,12 +155,20 @@ class TechnicalStrategy:
             if hasattr(ml_prediction, 'shape') and len(ml_prediction.shape) > 0:
                 logger.info(f"Predicción ML es un array de forma {ml_prediction.shape}, usando valor simplificado: {ml_pred_value}")
             
-            # MODIFICADO: Considerar también señales neutrales con RSI favorable
+            # Procesar señales de compra (LONG)
             if ml_pred_value == 1 or signal == 1:
-                logger.info(f"Señal de entrada detectada: ML={ml_pred_value}, Técnica={signal}")
+                logger.info(f"Señal de entrada LONG detectada: ML={ml_pred_value}, Técnica={signal}")
+                self.next_position_type = 'long'
                 return self._validate_trade_conditions(price, available_balance)
+            # Procesar señales de venta (SHORT)
+            elif ml_pred_value == -1 or signal == -1:
+                logger.info(f"Señal de entrada SHORT detectada: ML={ml_pred_value}, Técnica={signal}")
+                self.next_position_type = 'short'
+                return self._validate_trade_conditions(price, available_balance)
+            # Procesar señales neutrales con RSI favorable
             elif signal == 0 and rsi_favorable:
-                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada")
+                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada LONG")
+                self.next_position_type = 'long'
                 return self._validate_trade_conditions(price, available_balance)
             else:
                 logger.info(f"No se cumplen condiciones para entrada: ML={ml_pred_value}, Técnica={signal}, RSI favorable={rsi_favorable}")
@@ -165,9 +177,15 @@ class TechnicalStrategy:
             # Comportamiento basado solo en señales técnicas cuando no se usa ML
             if signal == 1:  # Señal de compra
                 logger.info(f"Señal técnica de compra detectada: {signal}")
+                self.next_position_type = 'long'
+                return self._validate_trade_conditions(price, available_balance)
+            elif signal == -1:  # Señal de venta
+                logger.info(f"Señal técnica de venta detectada: {signal}")
+                self.next_position_type = 'short'
                 return self._validate_trade_conditions(price, available_balance)
             elif signal == 0 and rsi_favorable:  # Señal neutral con RSI favorable
-                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada")
+                logger.info(f"Señal neutral con RSI favorable ({rsi_value}): considerando entrada LONG")
+                self.next_position_type = 'long'
                 return self._validate_trade_conditions(price, available_balance)
             else:
                 logger.info(f"No se cumplen condiciones para entrada: Técnica={signal}, RSI favorable={rsi_favorable}")
@@ -219,22 +237,32 @@ class TechnicalStrategy:
         # Establecer precio de entrada
         self.entry_price = price
         
-        # Calcular stop loss y take profit
-        self.stop_loss = price * (1 - self.stop_loss_pct)
-        self.take_profit = price * (1 + self.take_profit_pct)
+        # Determinar tipo de posición (LONG o SHORT)
+        position_type = getattr(self, 'next_position_type', 'long')  # Por defecto LONG si no se especificó
+        
+        # Calcular stop loss y take profit según el tipo de posición
+        if position_type == 'long':
+            self.stop_loss = price * (1 - self.stop_loss_pct)
+            self.take_profit = price * (1 + self.take_profit_pct)
+            self.position = 1  # Long
+        else:  # short
+            self.stop_loss = price * (1 + self.stop_loss_pct)
+            self.take_profit = price * (1 - self.take_profit_pct)
+            self.position = -1  # Short
         
         # Resetear variables de trailing stop
         self.trailing_stop = 0.0
         self.trailing_active = False
         self.highest_price = price
         
-        # Actualizar posición
-        self.position = 1  # Long
+        # Para posiciones SHORT, inicializar lowest_price para trailing stop
+        if position_type == 'short':
+            self.lowest_price = price
         
         # Registrar la operación
         trade = {
             'id': len(self.trades) + 1,
-            'type': 'long',
+            'type': position_type,
             'entry_price': price,
             'entry_time': timestamp,
             'position_size': self.position_size,
@@ -248,7 +276,7 @@ class TechnicalStrategy:
         }
         
         self.trades.append(trade)
-        logger.info(f"Entrada en operación LONG a precio {price}, tamaño: {self.position_size}, SL: {self.stop_loss}, TP: {self.take_profit}")
+        logger.info(f"Entrada en operación {position_type.upper()} a precio {price}, tamaño: {self.position_size}, SL: {self.stop_loss}, TP: {self.take_profit}")
         
         return trade
     
@@ -267,39 +295,81 @@ class TechnicalStrategy:
         if self.position == 0:
             return False
         
-        # Actualizar el precio más alto alcanzado para el trailing stop
-        if price > self.highest_price and self.position == 1:
-            self.highest_price = price
+        # Manejar posiciones LONG
+        if self.position == 1:  # LONG
+            # Actualizar el precio más alto alcanzado para el trailing stop
+            if price > self.highest_price:
+                self.highest_price = price
+                
+                # Activar trailing stop cuando el precio supere el 50% del camino hacia el take profit
+                halfway_to_tp = self.entry_price + ((self.take_profit - self.entry_price) * 0.5)
+                
+                if not self.trailing_active and price >= halfway_to_tp:
+                    self.trailing_active = True
+                    self.trailing_stop = price * (1 - self.trailing_percent)
+                    logger.info(f"Trailing stop activado a {self.trailing_stop} (precio actual: {price})")
+                
+                # Actualizar el trailing stop si ya está activo
+                elif self.trailing_active:
+                    new_trailing_stop = price * (1 - self.trailing_percent)
+                    if new_trailing_stop > self.trailing_stop:
+                        self.trailing_stop = new_trailing_stop
+                        logger.info(f"Trailing stop actualizado a {self.trailing_stop} (precio actual: {price})")
             
-            # Activar trailing stop cuando el precio supere el 50% del camino hacia el take profit
-            halfway_to_tp = self.entry_price + ((self.take_profit - self.entry_price) * 0.5)
+            # Verificar trailing stop si está activo
+            if self.trailing_active and price <= self.trailing_stop:
+                logger.info(f"Trailing Stop alcanzado a precio {price} (TS: {self.trailing_stop})")
+                return True
             
-            if not self.trailing_active and price >= halfway_to_tp:
-                self.trailing_active = True
-                self.trailing_stop = price * (1 - self.trailing_percent)
-                logger.info(f"Trailing stop activado a {self.trailing_stop} (precio actual: {price})")
+            # Verificar stop loss tradicional
+            if price <= self.stop_loss:
+                logger.info(f"Stop Loss alcanzado a precio {price} (SL: {self.stop_loss})")
+                return True
             
-            # Actualizar el trailing stop si ya está activo
-            elif self.trailing_active:
-                new_trailing_stop = price * (1 - self.trailing_percent)
-                if new_trailing_stop > self.trailing_stop:
-                    self.trailing_stop = new_trailing_stop
-                    logger.info(f"Trailing stop actualizado a {self.trailing_stop} (precio actual: {price})")
+            # Verificar take profit
+            if price >= self.take_profit:
+                logger.info(f"Take Profit alcanzado a precio {price} (TP: {self.take_profit})")
+                return True
         
-        # Verificar trailing stop si está activo
-        if self.trailing_active and price <= self.trailing_stop:
-            logger.info(f"Trailing Stop alcanzado a precio {price} (TS: {self.trailing_stop})")
-            return True
-        
-        # Verificar stop loss tradicional
-        if price <= self.stop_loss:
-            logger.info(f"Stop Loss alcanzado a precio {price} (SL: {self.stop_loss})")
-            return True
-        
-        # Verificar take profit
-        if price >= self.take_profit:
-            logger.info(f"Take Profit alcanzado a precio {price} (TP: {self.take_profit})")
-            return True
+        # Manejar posiciones SHORT
+        elif self.position == -1:  # SHORT
+            # Verificar que lowest_price esté inicializado
+            if not hasattr(self, 'lowest_price'):
+                self.lowest_price = price
+            
+            # Actualizar el precio más bajo alcanzado para el trailing stop
+            if price < self.lowest_price:
+                self.lowest_price = price
+                
+                # Activar trailing stop cuando el precio caiga el 50% del camino hacia el take profit
+                halfway_to_tp = self.entry_price - ((self.entry_price - self.take_profit) * 0.5)
+                
+                if not self.trailing_active and price <= halfway_to_tp:
+                    self.trailing_active = True
+                    self.trailing_stop = price * (1 + self.trailing_percent)
+                    logger.info(f"Trailing stop activado a {self.trailing_stop} (SHORT, precio actual: {price})")
+                
+                # Actualizar el trailing stop si ya está activo
+                elif self.trailing_active:
+                    new_trailing_stop = price * (1 + self.trailing_percent)
+                    if new_trailing_stop < self.trailing_stop:
+                        self.trailing_stop = new_trailing_stop
+                        logger.info(f"Trailing stop actualizado a {self.trailing_stop} (SHORT, precio actual: {price})")
+            
+            # Verificar trailing stop si está activo
+            if self.trailing_active and price >= self.trailing_stop:
+                logger.info(f"Trailing Stop alcanzado a precio {price} (SHORT, TS: {self.trailing_stop})")
+                return True
+            
+            # Verificar stop loss tradicional
+            if price >= self.stop_loss:
+                logger.info(f"Stop Loss alcanzado a precio {price} (SHORT, SL: {self.stop_loss})")
+                return True
+            
+            # Verificar take profit
+            if price <= self.take_profit:
+                logger.info(f"Take Profit alcanzado a precio {price} (SHORT, TP: {self.take_profit})")
+                return True
         
         # Verificar tiempo en la operación (salir después de 24 horas si no se ha alcanzado SL o TP)
         if self.trades and self.trades[-1]['status'] == 'open':
@@ -351,13 +421,13 @@ class TechnicalStrategy:
         # Obtener la última operación
         trade = self.trades[-1]
         
-        # Calcular profit/loss
+        # Calcular profit/loss según el tipo de posición
         if self.position == 1:  # Long
             profit_loss = (price - trade['entry_price']) * trade['position_size']
             profit_loss_pct = (price / trade['entry_price'] - 1) * 100
-        else:  # Short (no implementado aún)
-            profit_loss = 0
-            profit_loss_pct = 0
+        else:  # Short
+            profit_loss = (trade['entry_price'] - price) * trade['position_size']
+            profit_loss_pct = (trade['entry_price'] / price - 1) * 100
         
         # Actualizar la operación
         trade['exit_price'] = price
@@ -378,8 +448,15 @@ class TechnicalStrategy:
         self.position_size = 0.0
         self.stop_loss = 0.0
         self.take_profit = 0.0
+        self.trailing_stop = 0.0
+        self.trailing_active = False
         
-        logger.info(f"Salida de operación a precio {price}, P/L: {profit_loss:.2f} USDT ({profit_loss_pct:.2f}%)")
+        # Limpiar variables específicas de posiciones SHORT si existen
+        if hasattr(self, 'lowest_price'):
+            delattr(self, 'lowest_price')
+        
+        position_type = 'LONG' if trade['type'] == 'long' else 'SHORT'
+        logger.info(f"Salida de operación {position_type} a precio {price}, P/L: {profit_loss:.2f} USDT ({profit_loss_pct:.2f}%)")
         
         return trade
     
