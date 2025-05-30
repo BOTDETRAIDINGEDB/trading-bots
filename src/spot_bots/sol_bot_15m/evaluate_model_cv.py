@@ -269,13 +269,19 @@ def evaluate_model_with_cross_validation():
         
         # Lista de posibles ubicaciones de credenciales
         possible_paths = [
+            # Ruta principal en la máquina virtual (encontrada con find)
+            '/home/edisonbautistaruiz2025/trading-bots-api/credentials.json',
+            
+            # Rutas de respaldo
             credentials_path,  # En el directorio actual
             os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'credentials.json'),  # Directorio padre
             os.path.expanduser('~/.credentials.json'),  # En el directorio home
             os.path.join(os.path.expanduser('~'), 'credentials.json'),  # En el directorio home sin punto
+            os.path.join(os.path.expanduser('~'), 'credentials_backup.json'),  # Archivo de respaldo encontrado
             os.path.join(os.path.expanduser('~'), 'new-trading-bots-api', 'credentials.json'),  # En el directorio del API
             '/home/edisonbautistaruiz2025/new-trading-bots-api/credentials.json',  # Ruta absoluta al API
             '/home/edisonbautistaruiz2025/credentials.json',  # Ruta absoluta al home
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'trading-bots-api', 'credentials.json'),  # Relativa al directorio actual
             os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'new-trading-bots-api', 'credentials.json'),  # Relativa al directorio actual
             os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'credentials.json')  # Relativa al directorio actual
         ]
