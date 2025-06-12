@@ -20,6 +20,36 @@ cd /home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_15m/
 5. **Verifica las credenciales configuradas**
 6. **Reinicia el bot limpiamente** en modo simulación en la nube
 
+## Scripts de Inicio Disponibles
+
+### 🚨 **MODO REAL** (Dinero Real) - ¡NUEVO SCRIPT PROFESIONAL!
+
+```bash
+./start_cloud_real.sh
+```
+
+**Características del nuevo script profesional:**
+- ✅ **Validaciones completas de seguridad**
+- ✅ **Verificación de credenciales y dependencias**
+- ✅ **Confirmación obligatoria antes del inicio**
+- ✅ **Parámetros conservadores para dinero real (1.5% riesgo)**
+- ✅ **Verificación de balance mínimo (50 USDT)**
+- ✅ **Logs detallados y códigos de colores**
+- ✅ **Manejo profesional de errores**
+
+**⚠️ ADVERTENCIA:** Este script opera con dinero real. Lea toda la información en pantalla antes de confirmar.
+
+### 🧪 **MODO SIMULACIÓN** (Dinero Ficticio)
+
+```bash
+./start_simulation_learning.sh
+```
+
+**Para simulación y aprendizaje:**
+- Balance ficticio de 100 USDT
+- Sin riesgo de pérdidas reales
+- Ideal para probar estrategias
+
 ## Métodos Alternativos
 
 Si necesitas más control sobre el proceso, puedes usar estos comandos separados:
@@ -32,7 +62,7 @@ cd /home/edisonbautistaruiz2025/new-trading-bots/src/spot_bots/sol_bot_15m/
 
 ### Iniciar el bot en modo real:
 ```bash
-./start_bot.sh
+./start_cloud_real.sh
 ```
 
 ### Iniciar el bot en modo simulación:
