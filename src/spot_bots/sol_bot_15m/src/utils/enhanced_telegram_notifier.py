@@ -168,18 +168,33 @@ class EnhancedTelegramNotifier:
                     message = f"⚠️ Operación desconocida: {trade_data}"
             else:
                 # Compatibilidad con la versión anterior
-                # Determinar emoji según el tipo de operación
-                emoji = "🟢" if trade_type.lower() == "buy" else "🔴"
-                operation = "Compra" if trade_type.lower() == "buy" else "Venta"
+                # CORRECCIÓN: Mapear correctamente entry/exit a buy/sell
+                # 'entry' = entrada en posición LONG = COMPRA
+                # 'exit' = salida de posición LONG = VENTA
+                if trade_type.lower() == 'entry':
+                    # Entrada en posición = COMPRA
+                    emoji = "🟢"
+                    operation = "COMPRA"
+                    trade_action = "buy"
+                elif trade_type.lower() == 'exit':
+                    # Salida de posición = VENTA
+                    emoji = "🔴"
+                    operation = "VENTA"
+                    trade_action = "sell"
+                else:
+                    # Fallback para compatibilidad con llamadas directas buy/sell
+                    emoji = "🟢" if trade_type.lower() == "buy" else "🔴"
+                    operation = "COMPRA" if trade_type.lower() == "buy" else "VENTA"
+                    trade_action = trade_type.lower()
                 
                 # Construir mensaje básico
-                message = f"{emoji} *{operation} de {symbol}* {emoji}\n\n"
+                message = f"{emoji} *{operation} DE {symbol}* {emoji}\n\n"
                 message += f"💰 *Precio:* `{price} USDT`\n"
                 message += f"📊 *Cantidad:* `{size} {symbol.replace('USDT', '')}`\n"
                 message += f"💵 *Total:* `{price * size:.2f} USDT`\n"
                 
                 # Añadir información de beneficio/pérdida si es una venta
-                if trade_type.lower() == "sell" and profit_loss is not None:
+                if trade_action == "sell" and profit_loss is not None:
                     pl_emoji = "🟢" if profit_loss >= 0 else "🔴"
                     message += f"\n{pl_emoji} *P/L:* `{profit_loss:.2f} USDT`\n"
                     message += f"{pl_emoji} *P/L %:* `{(profit_loss / (price * size)) * 100:.2f}%`\n"
