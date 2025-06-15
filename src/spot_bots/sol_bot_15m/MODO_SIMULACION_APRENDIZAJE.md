@@ -9,6 +9,11 @@ Este documento explica cómo utilizar el modo de simulación de aprendizaje para
 - **Datos Reales**: Utiliza la API de Binance con credenciales reales para obtener datos de mercado en tiempo real
 - **Balance Ficticio**: Opera con un balance simulado (100 USDT por defecto)
 - **Aprendizaje Continuo**: Reentrenamiento automático del modelo ML cada 15 minutos
+- **Gestión de Datos de Entrenamiento**:
+  - Almacenamiento automático en `training_data/solusdt_training_data.csv`
+  - Cálculo de indicadores técnicos avanzados
+  - Generación automática de señales de trading
+  - Limpieza y validación de datos
 - **Notificaciones Reales**: Envía notificaciones a Telegram sobre operaciones y estado
 - **Registro Detallado**: Mantiene logs completos de todas las decisiones y operaciones
 - **Optimizaciones Cloud**: Configurado para rendimiento óptimo en Google Cloud VM

@@ -191,7 +191,31 @@ Estas mejoras hacen que el bot SOL sea más robusto, eficiente y adaptable, espe
   - `sol_bot_sim_YYYYMMDD_HHMMSS.log` para simulación
   - Separación clara para facilitar análisis
 
-### 8. Robustez Operacional Enterprise
+### 8. Mejoras en el Sistema de Entrenamiento del Modelo ML
+
+- **Actualización del Script `update_model.py`**:
+  - Reescritura completa para mejor manejo de errores y logging
+  - Implementación de métodos correctos del `DataProcessor`:
+    - `klines_to_dataframe` para conversión de datos
+    - `calculate_indicators` para cálculo de indicadores técnicos
+    - `generate_signals` para generación de señales de trading
+  - Eliminación de referencias a métodos obsoletos como `add_technical_indicators`
+  - Mejor manejo de archivos y directorios
+
+- **Gestión de Datos de Entrenamiento**:
+  - Creación automática del directorio `training_data/` si no existe
+  - Guardado sistemático de datos de entrenamiento en `training_data/solusdt_training_data.csv`
+  - Validación de datos antes del entrenamiento
+  - Eliminación segura de filas con valores NaN
+  - Logging detallado de cada etapa del proceso
+
+- **Mejoras en el Proceso de Entrenamiento**:
+  - Entrenamiento más eficiente del modelo ML
+  - Validación de métricas de rendimiento
+  - Manejo robusto de errores durante el entrenamiento
+  - Guardado seguro del modelo entrenado
+
+### 9. Robustez Operacional Enterprise
 - **Manejo de Errores Avanzado**:
   - Try-catch en operaciones críticas
   - Fallbacks automáticos para operaciones de red

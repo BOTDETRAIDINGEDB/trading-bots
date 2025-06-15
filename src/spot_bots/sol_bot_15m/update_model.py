@@ -23,84 +23,109 @@ from utils.binance_client import BinanceAPI
 from data.processor import DataProcessor
 from models.ml_model import MLModel
 
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("model_update.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+def setup_logging():
+    """Configura el sistema de logging"""
+    os.makedirs('logs', exist_ok=True)
+    log_file = f"logs/update_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger(__name__)
 
-def parse_arguments():
-    """Parsea los argumentos de la línea de comandos."""
-    parser = argparse.ArgumentParser(description='Actualizar modelo de ML para el bot SOL')
-    parser.add_argument('--symbol', type=str, default='SOLUSDT', help='Símbolo a procesar')
-    parser.add_argument('--interval', type=str, default='15m', help='Intervalo de tiempo')
-    parser.add_argument('--lookback', type=int, default=90, help='Días de datos históricos a utilizar')
-    parser.add_argument('--test-size', type=float, default=0.2, help='Proporción de datos para test')
-    return parser.parse_args()
+def load_environment():
+    """Carga las variables de entorno"""
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(env_path):
+        load_dotenv(env_path)
+    else:
+        logger.warning("No se encontró el archivo .env. Usando variables de entorno del sistema.")
 
-def main():
-    """Función principal para actualizar el modelo."""
-    # Cargar variables de entorno
-    load_dotenv()
-    
-    # Parsear argumentos
-    args = parse_arguments()
-    
-    logger.info(f"Iniciando actualización del modelo para {args.symbol} en intervalo {args.interval}")
-    
+def get_historical_data(symbol, interval, days=30):
+    """Obtiene datos históricos de Binance"""
     try:
-        # Inicializar componentes
-        binance_api = BinanceAPI()
-        data_processor = DataProcessor()
-        model = MLModel(model_path=f"{args.symbol.lower()}_model.pkl")
+        api_key = os.getenv('BINANCE_API_KEY')
+        api_secret = os.getenv('BINANCE_API_SECRET')
         
-        # Obtener datos históricos
+        if not api_key or not api_secret:
+            raise ValueError("API key o secret no configurados en las variables de entorno")
+            
+        client = BinanceAPI(api_key, api_secret)
         end_time = datetime.now()
-        start_time = end_time - timedelta(days=args.lookback)
+        start_time = end_time - timedelta(days=days)
         
-        logger.info(f"Obteniendo datos históricos desde {start_time} hasta {end_time}")
-        historical_data = binance_api.get_historical_klines(
-            symbol=args.symbol,
-            interval=args.interval,
-            start_time=start_time,
-            end_time=end_time
+        logger.info(f"Obteniendo datos históricos para {symbol} {interval} desde {start_time} hasta {end_time}")
+        klines = client.get_historical_klines(
+            symbol=symbol,
+            interval=interval,
+            start_str=start_time.strftime('%d %b %Y %H:%M:%S'),
+            end_str=end_time.strftime('%d %b %Y %H:%M:%S')
         )
         
-        if not historical_data or len(historical_data) < 100:
-            logger.error(f"No se pudieron obtener suficientes datos históricos. Obtenidos: {len(historical_data) if historical_data else 0}")
+        logger.info(f"Se obtuvieron {len(klines)} velas")
+        return klines
+    except Exception as e:
+        logger.error(f"Error al obtener datos históricos: {str(e)}")
+        raise
+
+def main():
+    parser = argparse.ArgumentParser(description='Actualizar y reentrenar el modelo de ML')
+    parser.add_argument('--symbol', type=str, default='SOLUSDT', help='Símbolo del par de trading')
+    parser.add_argument('--interval', type=str, default='15m', help='Intervalo de tiempo')
+    parser.add_argument('--days', type=int, default=30, help='Número de días de datos históricos')
+    args = parser.parse_args()
+    
+    load_environment()
+    
+    try:
+        # Obtener datos históricos
+        klines = get_historical_data(args.symbol, args.interval, args.days)
+        if not klines:
+            logger.error("No se obtuvieron datos históricos")
             return
-        
-        logger.info(f"Datos históricos obtenidos: {len(historical_data)} velas")
         
         # Procesar datos
-        df = data_processor.process_historical_data(historical_data)
+        processor = DataProcessor()
+        df = processor.klines_to_dataframe(klines)
+        logger.info(f"Datos convertidos a DataFrame: {df.shape[0]} filas, {df.shape[1]} columnas")
         
-        # Añadir indicadores técnicos
-        df = data_processor.add_technical_indicators(df)
+        # Calcular indicadores técnicos
+        df = processor.calculate_indicators(df)
+        logger.info("Indicadores técnicos calculados")
         
-        # Eliminar filas con NaN
+        # Generar señales
+        df = processor.generate_signals(df)
+        logger.info(f"Señales generadas. Señales de compra: {(df['signal'] == 1).sum()}, "
+                   f"Señales de venta: {(df['signal'] == -1).sum()}")
+        
+        # Eliminar filas con NaN (pueden aparecer por los cálculos de indicadores)
         df = df.dropna()
+        logger.info(f"Datos después de eliminar NaN: {df.shape[0]} filas")
         
-        if df.empty:
-            logger.error("DataFrame vacío después de procesar datos")
-            return
+        # Guardar datos de entrenamiento
+        os.makedirs('training_data', exist_ok=True)
+        training_file = f'training_data/{args.symbol.lower()}_training_data.csv'
+        df.to_csv(training_file, index=False)
+        logger.info(f"Datos de entrenamiento guardados en {training_file}")
         
         # Entrenar modelo
-        logger.info("Entrenando modelo...")
-        metrics = model.train(df, test_size=args.test_size)
+        model = MLModel()
+        metrics = model.train(df)
         
-        # Guardar modelo
-        model.save_model()
-        
-        logger.info(f"Modelo actualizado y guardado. Métricas: {metrics}")
-        
+        if metrics:
+            logger.info(f"Modelo reentrenado exitosamente. Métricas: {metrics}")
+        else:
+            logger.error("No se pudo entrenar el modelo")
+            
     except Exception as e:
-        logger.error(f"Error al actualizar el modelo: {str(e)}")
+        logger.error(f"Error en la actualización del modelo: {str(e)}", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
+    logger = setup_logging()
     main()
